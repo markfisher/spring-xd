@@ -26,16 +26,16 @@ import org.kohsuke.args4j.Option;
 public class AdminOptions {
 
 	@Option(name="--help", usage="Show options help", aliases={"-?", "-h"})
-	private boolean showHelp = false;
+	private final boolean showHelp = false;
 
 	@Option(name="--xdHomeDir", usage="The XD installation directory", metaVar="<xdHomeDir>")
-	private String xdHomeDir = "";
+	private final String xdHomeDir = "";
 
 	@Option(name="--transport", usage="The transport to be used (redis, rabbit, local)", metaVar="<transport>")
-	private String transport = "";
-	
-	@Option(name="--httpPort", usage="Http port for the stream server(default: 8080)", metaVar="<httpPort>")
-	private String httpPort = "8080";
+	private final String transport = "";
+
+	@Option(name="--httpPort", usage="Http port for the stream server (default: 8080)", metaVar="<httpPort>")
+	private final String httpPort = "";
 
 	/**
 	 * @return the showHelp
@@ -57,7 +57,7 @@ public class AdminOptions {
 	public String getTransport() {
 		return transport;
 	}
-	
+
 	/**
 	 * @return http port
 	 */
