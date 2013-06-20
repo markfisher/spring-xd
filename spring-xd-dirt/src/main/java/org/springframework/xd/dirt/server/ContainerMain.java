@@ -25,13 +25,12 @@ import org.springframework.xd.dirt.launcher.RedisContainerLauncher;
 
 /**
  * The main driver class for the container
- * 
+ *
  * @author Mark Pollack
  * @author Jennifer Hickey
  * @author Ilayaperumal Gopinathan
  * @author Mark Fisher
  * @author David Turanski
- * 
  */
 public class ContainerMain  {
 
@@ -39,7 +38,7 @@ public class ContainerMain  {
 
 	/**
 	 * Start the RedisContainerLauncher
-	 * 
+	 *
 	 * @param args
 	 *            command line argument
 	 */

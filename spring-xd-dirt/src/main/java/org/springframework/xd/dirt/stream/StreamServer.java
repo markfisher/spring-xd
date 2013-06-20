@@ -10,17 +10,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
+
 package org.springframework.xd.dirt.stream;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 import java.util.concurrent.ScheduledFuture;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
@@ -28,13 +23,12 @@ import org.apache.catalina.core.AprLifecycleListener;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.integration.MessagingException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
-import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
@@ -44,7 +38,6 @@ import org.springframework.web.servlet.DispatcherServlet;
  * @author Jennifer Hickey
  * @author Gary Russell
  * @author David Turanski
- *
  */
 public class StreamServer implements SmartLifecycle, InitializingBean {
 
@@ -52,7 +45,7 @@ public class StreamServer implements SmartLifecycle, InitializingBean {
 
 	private volatile String contextPath = "";
 
-	private volatile String servletName = "rest";
+	private volatile String servletName = "xd";
 
 	private final int port;
 
@@ -63,8 +56,8 @@ public class StreamServer implements SmartLifecycle, InitializingBean {
 	private volatile ScheduledFuture<?> handlerTask = null;
 
 	private volatile boolean running;
-	
-	private WebApplicationContext context;
+
+	private final WebApplicationContext context;
 
 	public StreamServer(WebApplicationContext context, int port) {
 		Assert.notNull(context, "context must not be null");
@@ -83,11 +76,18 @@ public class StreamServer implements SmartLifecycle, InitializingBean {
 	}
 
 	/**
-	 * Set the servletName. Default is streams
+	 * Set the servletName. Default is 'xd'.
 	 * @param servletName
 	 */
 	public void setServletName(String servletName) {
 		this.servletName = servletName;
+	}
+
+	/**
+	 * @return the HTTP port
+	 */
+	public int getPort() {
+		return this.port;
 	}
 
 	@Override
@@ -154,40 +154,11 @@ public class StreamServer implements SmartLifecycle, InitializingBean {
 		callback.run();
 	}
 
-	/**
-	 *
-	 * @return the HTTP port
-	 */
-	public int getPort() {
-		return this.port;
-	}
-
 	private class Handler implements Runnable {
 		@Override
 		public void run() {
 			tomcat.getServer().await();
 		}
 	}
-
-//	@SuppressWarnings("serial")
-//	private class XdServlet extends HttpServlet {
-//		@Override
-//		protected void service(HttpServletRequest request, HttpServletResponse response)
-//				throws ServletException, IOException {
-//			String streamName = request.getPathInfo();
-//			Assert.hasText(streamName, "no stream name (e.g. localhost/streams/streamname");
-//			streamName = streamName.replaceAll("/", "");
-//			if ("POST".equalsIgnoreCase(request.getMethod())) {
-//				String streamConfig = FileCopyUtils.copyToString(request.getReader());
-//				streamDeployer.deployStream(streamName, streamConfig);
-//			}
-//			else if ("DELETE".equalsIgnoreCase(request.getMethod())) {
-//				streamDeployer.undeployStream(streamName);
-//			}
-//			else {
-//				response.sendError(405);
-//			}
-//		}
-//	}
 
 }

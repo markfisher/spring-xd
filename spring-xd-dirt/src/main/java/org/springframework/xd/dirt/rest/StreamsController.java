@@ -24,22 +24,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.xd.dirt.stream.StreamDeployer;
 
+/**
+ * @author Eric Bottard
+ */
 @Controller
 @RequestMapping("/streams")
 public class StreamsController {
 
 	@Autowired
 	private StreamDeployer streamDeployer;
-	
-	@RequestMapping(value="/{name}", method= {RequestMethod.PUT, RequestMethod.POST})
+
+	@RequestMapping(value="/{name}", method={RequestMethod.PUT, RequestMethod.POST})
 	public void deploy(@PathVariable("name") String name, @RequestBody String dsl) {
 		streamDeployer.deployStream(name, dsl);
 	}
-	
-	@RequestMapping(value="/{name}", method = RequestMethod.DELETE)
-	public void deploy(@PathVariable("name") String name) {
+
+	@RequestMapping(value="/{name}", method=RequestMethod.DELETE)
+	public void undeploy(@PathVariable("name") String name) {
 		streamDeployer.undeployStream(name);
 	}
-	
-	
+
 }

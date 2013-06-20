@@ -16,7 +16,6 @@
 
 package org.springframework.xd.dirt.server;
 
-
 /**
  * A class the defines the options that will be parsed on the container command line.
  */

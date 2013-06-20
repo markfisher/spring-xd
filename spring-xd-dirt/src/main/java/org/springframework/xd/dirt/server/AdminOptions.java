@@ -19,9 +19,8 @@ package org.springframework.xd.dirt.server;
 import org.kohsuke.args4j.Option;
 
 /**
- * A class the defines the options that will be parsed on the admin command line
+ * A class the defines the options that will be parsed on the admin command line.
  * @author Mark Pollack
- *
  */
 public class AdminOptions extends AbstractOptions {
 

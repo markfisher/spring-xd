@@ -20,16 +20,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
+
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.data.redis.RedisConnectionFailureException;
-import org.springframework.util.StringUtils;
-import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.XmlWebApplicationContext;
 import org.springframework.xd.dirt.container.DefaultContainer;
 import org.springframework.xd.dirt.listener.util.BannerUtils;
-import org.springframework.xd.dirt.stream.StreamDeployer;
 import org.springframework.xd.dirt.stream.StreamServer;
 
 /**
@@ -39,6 +36,7 @@ import org.springframework.xd.dirt.stream.StreamServer;
  * @author Jennifer Hickey
  * @author Ilayaperumal Gopinathan
  * @author Mark Fisher
+ * @author Eric Bottard
  */
 public class AdminMain {
 
@@ -52,20 +50,18 @@ public class AdminMain {
 		CmdLineParser parser = new CmdLineParser(options);
 		try {
 			parser.parseArgument(args);
-		} catch (CmdLineException e) {
+		}
+		catch (CmdLineException e) {
 			logger.error(e.getMessage());
 			parser.printUsage(System.err);
 			System.exit(1);
 		}
-
 		AbstractOptions.setXDHome(options.getXDHomeDir());
 		AbstractOptions.setXDTransport(options.getTransport());
-
 		if (options.isShowHelp()) {
 			parser.printUsage(System.err);
 			System.exit(0);
 		}
-
 		launchStreamServer(options);
 	}
 
@@ -78,7 +74,7 @@ public class AdminMain {
 			context.setConfigLocation("classpath:"
 					+ DefaultContainer.XD_INTERNAL_CONFIG_ROOT + "admin-server.xml");
 			context.refresh();
-			
+
 			// Not making StreamServer a spring bean eases move to .war file if needed
 			final StreamServer server = new StreamServer(context, options.getHttpPort());
 			server.afterPropertiesSet();
@@ -94,7 +90,8 @@ public class AdminMain {
 				}
 			});
 			context.registerShutdownHook();
-		} catch (RedisConnectionFailureException e) {
+		}
+		catch (RedisConnectionFailureException e) {
 			final Log logger = LogFactory.getLog(StreamServer.class);
 			logger.fatal(e.getMessage());
 			System.err.println("Redis does not seem to be running. Did you install and start Redis? "

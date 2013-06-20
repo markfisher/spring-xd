@@ -17,11 +17,12 @@
 package org.springframework.xd.dirt.server;
 
 import org.kohsuke.args4j.Option;
+
 import org.springframework.util.StringUtils;
 
 /**
  * Options shared by both the admin and the container server.
- * 
+ *
  * @author Eric Bottard
  * @author Mark Pollack
  * @author David Turanski
@@ -30,9 +31,9 @@ import org.springframework.util.StringUtils;
 public class AbstractOptions {
 
 	static final String DEFAULT_HOME = "..";
-	
+
 	static final String XD_HOME_KEY = "xd.home";
-	
+
 	static final String XD_TRANSPORT_KEY = "xd.transport";
 
 	/**
@@ -54,7 +55,7 @@ public class AbstractOptions {
 
 	@Option(name = "--help", usage = "Show options help", aliases = { "-?",	"-h" })
 	private boolean showHelp = false;
-	
+
 	@Option(name = "--transport", usage = "The transport to be used (default: redis)")
 	private Transport transport = Transport.redis;
 
@@ -81,6 +82,5 @@ public class AbstractOptions {
 	public boolean isShowHelp() {
 		return showHelp;
 	}
-
 
 }

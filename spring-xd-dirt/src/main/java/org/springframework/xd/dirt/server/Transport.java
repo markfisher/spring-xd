@@ -18,7 +18,7 @@ package org.springframework.xd.dirt.server;
 
 /**
  * The kind of transport used for communication between the admin server and container(s).
- *  
+ *
  * @author Eric Bottard
  */
 public enum Transport {
@@ -26,8 +26,8 @@ public enum Transport {
 	/**
 	 * Use same-process communication, using an in memory queue.
 	 */
-	local, 
-	
+	local,
+
 	/**
 	 * Use redis (http://redis.io) as the communication middleware.
 	 */
@@ -37,6 +37,6 @@ public enum Transport {
 //	 * Use RabbitMQ (http://www.rabbitmq.com/) as the communication middleware.
 //	 */
 //	rabbitmq
-	; 
-	
+	;
+
 }
