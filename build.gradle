@@ -219,6 +219,18 @@ project('spring-xd-analytics') {
 	}
 }
 
+project('spring-xd-batch') {
+	description = 'Spring XD Batch'
+	dependencies {
+		compile "org.springframework.batch:spring-batch-core:$springBatchVersion"
+		compile "org.springframework.integration:spring-integration-core:$springIntegrationVersion"
+		testCompile project(":spring-xd-test")
+		runtime "log4j:log4j:$log4jVersion",
+				"org.slf4j:jcl-over-slf4j:$slf4jVersion",
+				"org.slf4j:slf4j-log4j12:$slf4jVersion"
+	}
+}
+
 project('spring-xd-dirt') {
 	description = 'Spring XD DIRT'
 	configurations {
