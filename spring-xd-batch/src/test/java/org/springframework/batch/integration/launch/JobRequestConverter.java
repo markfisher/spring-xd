@@ -19,7 +19,6 @@ package org.springframework.batch.integration.launch;
 import java.util.Properties;
 
 import org.springframework.batch.core.converter.DefaultJobParametersConverter;
-import org.springframework.batch.integration.launch.JobLaunchRequest;
 import org.springframework.batch.integration.test.support.JobSupport;
 import org.springframework.integration.annotation.ServiceActivator;
 
@@ -31,7 +30,8 @@ public class JobRequestConverter {
 	@ServiceActivator
 	public JobLaunchRequest convert(String jobName) {
 		Properties properties = new Properties();
-		return new JobLaunchRequest(new JobSupport(jobName), new DefaultJobParametersConverter().getJobParameters(properties));
+		return new JobLaunchRequest(new JobSupport(jobName),
+				new DefaultJobParametersConverter().getJobParameters(properties));
 	}
 
 }
