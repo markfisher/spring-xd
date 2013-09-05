@@ -54,6 +54,8 @@ public class StreamPluginTests {
 
 	private MessageChannel output = new DirectChannel();
 
+	private MessageChannel tap = new DirectChannel();
+
 	@Before
 	public void setup() {
 		System.setProperty("XD_TRANSPORT", "local");
@@ -76,29 +78,21 @@ public class StreamPluginTests {
 		when(module.getDeploymentMetadata()).thenReturn(new DeploymentMetadata("foo", 1));
 		when(module.getType()).thenReturn(ModuleType.PROCESSOR.toString());
 		final ChannelRegistry registry = mock(ChannelRegistry.class);
+		when(module.getName()).thenReturn("testing");
 		when(module.getComponent(ChannelRegistry.class)).thenReturn(registry);
 		when(module.getComponent("input", MessageChannel.class)).thenReturn(input);
 		when(module.getComponent("output", MessageChannel.class)).thenReturn(output);
+		when(module.getComponent("tap", MessageChannel.class)).thenReturn(tap);
 		plugin.preProcessModule(module);
 		plugin.postProcessModule(module);
 		verify(registry).createInbound("foo.0", input, Collections.singletonList(MediaType.ALL), false);
 		verify(registry).createOutbound("foo.1", output, false);
+		verify(registry).createOutboundPubSub("tap:foo.testing", tap);
+		plugin.preDestroyModule(module);
 		plugin.removeModule(module);
 		verify(registry).deleteInbound("foo.0");
 		verify(registry).deleteOutbound("foo.1");
-	}
-
-	@Test
-	public void tapComponentsAdded() {
-		SimpleModule module = new SimpleModule(new ModuleDefinition("tap", "source"), new DeploymentMetadata(
-				"mystream", 1));
-		plugin.preProcessModule(module);
-		plugin.postProcessModule(module);
-		String[] moduleBeans = module.getApplicationContext().getBeanDefinitionNames();
-		assertEquals(2, moduleBeans.length);
-		for (String moduleBeanString : moduleBeans) {
-			assertTrue(moduleBeanString.contains("Tap#") || moduleBeanString.contains("integrationEvaluationContext"));
-		}
+		verify(registry).deleteOutboundPubSub("tap:foo.testing", tap);
 	}
 
 	@Test

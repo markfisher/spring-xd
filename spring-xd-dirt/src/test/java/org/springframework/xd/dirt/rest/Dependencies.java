@@ -47,16 +47,11 @@ import org.springframework.xd.dirt.stream.JobDeployer;
 import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
 import org.springframework.xd.dirt.stream.StreamDeployer;
 import org.springframework.xd.dirt.stream.StreamRepository;
-import org.springframework.xd.dirt.stream.TapDefinitionRepository;
-import org.springframework.xd.dirt.stream.TapDeployer;
-import org.springframework.xd.dirt.stream.TapInstanceRepository;
 import org.springframework.xd.dirt.stream.XDParser;
 import org.springframework.xd.dirt.stream.XDStreamParser;
 import org.springframework.xd.dirt.stream.memory.InMemoryJobDefinitionRepository;
 import org.springframework.xd.dirt.stream.memory.InMemoryStreamDefinitionRepository;
 import org.springframework.xd.dirt.stream.memory.InMemoryStreamRepository;
-import org.springframework.xd.dirt.stream.memory.InMemoryTapDefinitionRepository;
-import org.springframework.xd.dirt.stream.memory.InMemoryTapInstanceRepository;
 
 /**
  * Provide a mockito mock for any of the business layer dependencies. Adding yet another configuration class on top, one
@@ -136,22 +131,6 @@ public class Dependencies {
 	}
 
 	@Bean
-	public TapDefinitionRepository tapDefinitionRepository() {
-		return new InMemoryTapDefinitionRepository();
-	}
-
-	@Bean
-	public TapDeployer tapDeployer() {
-		return new TapDeployer(tapDefinitionRepository(), streamDefinitionRepository(), deploymentMessageSender(),
-				parser(), tapInstanceRepository());
-	}
-
-	@Bean
-	public TapInstanceRepository tapInstanceRepository() {
-		return new InMemoryTapInstanceRepository();
-	}
-
-	@Bean
 	public JobService jobService() {
 		return new DistributedJobService(searchableJobInstanceDao(), searchableJobExecutionDao(),
 				searchableStepExecutionDao(), jobRepository(), jobLauncher(),
@@ -192,4 +171,5 @@ public class Dependencies {
 	public ExecutionContextDao executionContextDao() {
 		return mock(JdbcExecutionContextDao.class);
 	}
+
 }
