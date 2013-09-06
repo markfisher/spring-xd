@@ -85,9 +85,9 @@ public abstract class ChannelRegistrySupport implements ChannelRegistry, BeanCla
 		synchronized (this.bridges) {
 			Iterator<Bridge> iterator = this.bridges.iterator();
 			while (iterator.hasNext()) {
-				Bridge endpoint = iterator.next();
-				if (endpoint.getEndpoint().getComponentName().equals(name)) {
-					endpoint.stop();
+				Bridge bridge = iterator.next();
+				if (bridge.getEndpoint().getComponentName().equals(name)) {
+					bridge.stop();
 					iterator.remove();
 				}
 			}
@@ -100,10 +100,10 @@ public abstract class ChannelRegistrySupport implements ChannelRegistry, BeanCla
 		synchronized (this.bridges) {
 			Iterator<Bridge> iterator = this.bridges.iterator();
 			while (iterator.hasNext()) {
-				Bridge channelEndpoint = iterator.next();
-				if (channelEndpoint.getChannel().equals(channel) &&
-						channelEndpoint.getEndpoint().getComponentName().equals(name)) {
-					channelEndpoint.stop();
+				Bridge bridge = iterator.next();
+				if (bridge.getChannel().equals(channel) &&
+						bridge.getEndpoint().getComponentName().equals(name)) {
+					bridge.stop();
 					iterator.remove();
 					return;
 				}

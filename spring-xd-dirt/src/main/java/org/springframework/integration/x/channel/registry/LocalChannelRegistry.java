@@ -132,16 +132,16 @@ public class LocalChannelRegistry extends ChannelRegistrySupport implements Appl
 			boolean aliasHint) {
 		SharedChannelProvider channelProvider = aliasHint ? queueChannelProvider
 				: directChannelProvider;
-		createInbound(name, moduleInputChannel, acceptedMediaTypes, channelProvider);
+		doCreateInbound(name, moduleInputChannel, acceptedMediaTypes, channelProvider);
 	}
 
 	@Override
 	public void createInboundPubSub(String name, MessageChannel moduleInputChannel,
 			Collection<MediaType> acceptedMediaTypes) {
-		createInbound(name, moduleInputChannel, acceptedMediaTypes, pubsubChannelProvider);
+		doCreateInbound(name, moduleInputChannel, acceptedMediaTypes, pubsubChannelProvider);
 	}
 
-	private void createInbound(String name, MessageChannel moduleInputChannel,
+	private void doCreateInbound(String name, MessageChannel moduleInputChannel,
 			Collection<MediaType> acceptedMediaTypes,
 			SharedChannelProvider<?> channelProvider) {
 		Assert.hasText(name, "a valid name is required to register an inbound channel");
@@ -159,15 +159,15 @@ public class LocalChannelRegistry extends ChannelRegistrySupport implements Appl
 	public void createOutbound(String name, MessageChannel moduleOutputChannel, boolean aliasHint) {
 		SharedChannelProvider channelProvider = aliasHint ? queueChannelProvider
 				: directChannelProvider;
-		createOutbound(name, moduleOutputChannel, channelProvider);
+		doCreateOutbound(name, moduleOutputChannel, channelProvider);
 	}
 
 	@Override
 	public void createOutboundPubSub(String name, MessageChannel moduleOutputChannel) {
-		createOutbound(name, moduleOutputChannel, pubsubChannelProvider);
+		doCreateOutbound(name, moduleOutputChannel, pubsubChannelProvider);
 	}
 
-	private void createOutbound(String name, MessageChannel moduleOutputChannel,
+	private void doCreateOutbound(String name, MessageChannel moduleOutputChannel,
 			SharedChannelProvider<?> channelProvider) {
 		Assert.hasText(name, "a valid name is required to register an outbound channel");
 		Assert.notNull(moduleOutputChannel, "channel must not be null");
@@ -244,7 +244,7 @@ public class LocalChannelRegistry extends ChannelRegistrySupport implements Appl
 		handler.setBeanName(bridgeName);
 		handler.afterPropertiesSet();
 
-		// Usage of a CEFB allows to handle both Subscribable & Queue channels the same way
+		// Usage of a CEFB allows to handle both Subscribable & Pollable channels the same way
 		ConsumerEndpointFactoryBean cefb = new ConsumerEndpointFactoryBean();
 		cefb.setInputChannel(from);
 		cefb.setHandler(handler);

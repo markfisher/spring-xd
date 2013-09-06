@@ -66,7 +66,7 @@ public class RedisChannelRegistry extends ChannelRegistrySupport implements Disp
 		RedisQueueInboundChannelAdapter adapter = new RedisQueueInboundChannelAdapter("queue." + name,
 				this.connectionFactory);
 		adapter.setEnableDefaultSerializer(false);
-		createInbound(name, moduleInputChannel, acceptedMediaTypes, adapter);
+		doCreateInbound(name, moduleInputChannel, acceptedMediaTypes, adapter);
 	}
 
 	@Override
@@ -75,10 +75,10 @@ public class RedisChannelRegistry extends ChannelRegistrySupport implements Disp
 		RedisInboundChannelAdapter adapter = new RedisInboundChannelAdapter(this.connectionFactory);
 		adapter.setSerializer(null);
 		adapter.setTopics("topic." + name);
-		createInbound(name, moduleInputChannel, acceptedMediaTypes, adapter);
+		doCreateInbound(name, moduleInputChannel, acceptedMediaTypes, adapter);
 	}
 
-	private void createInbound(String name, MessageChannel moduleInputChannel,
+	private void doCreateInbound(String name, MessageChannel moduleInputChannel,
 			final Collection<MediaType> acceptedMediaTypes, MessageProducerSupport adapter) {
 		DirectChannel bridgeToModuleChannel = new DirectChannel();
 		bridgeToModuleChannel.setBeanName(name + ".bridge");
@@ -101,7 +101,7 @@ public class RedisChannelRegistry extends ChannelRegistrySupport implements Disp
 				connectionFactory);
 		queue.setEnableDefaultSerializer(false);
 		queue.afterPropertiesSet();
-		createOutbound(name, moduleOutputChannel, queue);
+		doCreateOutbound(name, moduleOutputChannel, queue);
 	}
 
 	@Override
@@ -110,10 +110,10 @@ public class RedisChannelRegistry extends ChannelRegistrySupport implements Disp
 		topic.setDefaultTopic("topic." + name);
 		topic.setSerializer(null);
 		topic.afterPropertiesSet();
-		createOutbound(name, moduleOutputChannel, topic);
+		doCreateOutbound(name, moduleOutputChannel, topic);
 	}
 
-	private void createOutbound(final String name, MessageChannel moduleOutputChannel, MessageHandler delegate) {
+	private void doCreateOutbound(final String name, MessageChannel moduleOutputChannel, MessageHandler delegate) {
 		Assert.isInstanceOf(SubscribableChannel.class, moduleOutputChannel);
 		MessageHandler handler = new SendingHandler(delegate);
 		EventDrivenConsumer consumer = new EventDrivenConsumer((SubscribableChannel) moduleOutputChannel, handler);

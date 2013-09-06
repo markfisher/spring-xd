@@ -88,9 +88,8 @@ public class RabbitChannelRegistry extends ChannelRegistrySupport implements Dis
 			logger.info("declaring queue for inbound: " + name);
 		}
 		Queue queue = new Queue(name);
-		this.rabbitAdmin.declareQueue(new Queue(name));
-		createInbound(name, moduleInputChannel, acceptedMediaTypes, queue);
-
+		this.rabbitAdmin.declareQueue(queue);
+		doCreateInbound(name, moduleInputChannel, acceptedMediaTypes, queue);
 	}
 
 	@Override
@@ -99,17 +98,16 @@ public class RabbitChannelRegistry extends ChannelRegistrySupport implements Dis
 		Queue queue = this.rabbitAdmin.declareQueue();
 		Binding binding = BindingBuilder.bind(queue).to(new FanoutExchange("topic." + name));
 		this.rabbitAdmin.declareBinding(binding);
-		createInbound(name, moduleInputChannel, acceptedMediaTypes, queue);
+		doCreateInbound(name, moduleInputChannel, acceptedMediaTypes, queue);
 	}
 
-	private void createInbound(String name, MessageChannel moduleInputChannel,
+	private void doCreateInbound(String name, MessageChannel moduleInputChannel,
 			Collection<MediaType> acceptedMediaTypes, Queue queue) {
 		SimpleMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer(this.connectionFactory);
 		if (this.concurrentConsumers != null) {
 			listenerContainer.setConcurrentConsumers(this.concurrentConsumers);
 		}
 		listenerContainer.setQueues(queue);
-		listenerContainer.afterPropertiesSet();
 		listenerContainer.afterPropertiesSet();
 		AmqpInboundChannelAdapter adapter = new AmqpInboundChannelAdapter(listenerContainer);
 		DirectChannel bridgeToModuleChannel = new DirectChannel();
@@ -137,7 +135,7 @@ public class RabbitChannelRegistry extends ChannelRegistrySupport implements Dis
 		queue.setRoutingKey(name); // uses default exchange
 		queue.setHeaderMapper(mapper);
 		queue.afterPropertiesSet();
-		createOutbound(name, moduleOutputChannel, queue);
+		doCreateOutbound(name, moduleOutputChannel, queue);
 	}
 
 	@Override
@@ -147,10 +145,10 @@ public class RabbitChannelRegistry extends ChannelRegistrySupport implements Dis
 		fanout.setExchangeName("topic." + name);
 		fanout.setHeaderMapper(mapper);
 		fanout.afterPropertiesSet();
-		createOutbound(name, moduleOutputChannel, fanout);
+		doCreateOutbound(name, moduleOutputChannel, fanout);
 	}
 
-	private void createOutbound(final String name, MessageChannel moduleOutputChannel, MessageHandler delegate) {
+	private void doCreateOutbound(final String name, MessageChannel moduleOutputChannel, MessageHandler delegate) {
 		Assert.isInstanceOf(SubscribableChannel.class, moduleOutputChannel);
 		MessageHandler handler = new SendingHandler(delegate);
 		EventDrivenConsumer consumer = new EventDrivenConsumer((SubscribableChannel) moduleOutputChannel, handler);
