@@ -182,7 +182,7 @@ public class XDStreamParser implements XDParser {
 		ModuleDefinition def = moduleDefinitionRepository.findByNameAndType(moduleName, type);
 		if (def == null || def.getResource() == null) {
 			List<ModuleDefinition> definitions = moduleDefinitionRepository.findByName(moduleName);
-			if (definitions == null || definitions.size() == 0) {
+			if (definitions.isEmpty()) {
 				throw new NoSuchModuleException(moduleName);
 			}
 			// TODO: revisit this method altogether; it shouldn't apply to composite modules but at this stage we don't
