@@ -57,6 +57,8 @@ public class ModulesController {
 
 	private final XDStreamParser parser;
 
+	private ModuleDefinitionResourceAssembler moduleDefinitionResourceAssembler = new ModuleDefinitionResourceAssembler();
+
 	@Autowired
 	public ModulesController(ModuleDefinitionRepository moduleDefinitionRepository) {
 		Assert.notNull(moduleDefinitionRepository, "moduleDefinitionRepository must not be null");
@@ -105,7 +107,7 @@ public class ModulesController {
 		ModuleType type = this.determineType(modules);
 		ModuleDefinition moduleDefinition = new ModuleDefinition(name, type);
 		moduleDefinition.setDefinition(definition);
-		ModuleDefinitionResource resource = new ModuleDefinitionResourceAssembler().toResource(moduleDefinition);
+		ModuleDefinitionResource resource = moduleDefinitionResourceAssembler.toResource(moduleDefinition);
 		this.repository.save(moduleDefinition);
 		return resource;
 	}
