@@ -124,14 +124,12 @@ public class ModuleDeployer extends AbstractMessageHandler implements Applicatio
 	@Override
 	protected synchronized void handleMessageInternal(Message<?> message) throws Exception {
 		String payloadString = message.getPayload().toString();
-		Class<?> type = (payloadString.contains("\"composite\":true")) ? CompositeModuleDeploymentRequest.class
-				: ModuleDeploymentRequest.class;
-		Object deserialized = this.mapper.readValue(payloadString, type);
+		ModuleDeploymentRequest deserialized = this.mapper.readValue(payloadString, ModuleDeploymentRequest.class);
 		if (deserialized instanceof CompositeModuleDeploymentRequest) {
 			handleCompositeModuleDeployment((CompositeModuleDeploymentRequest) deserialized, message);
 		}
 		else {
-			handleDeploymentRequest((ModuleDeploymentRequest) deserialized, message);
+			handleDeploymentRequest(deserialized, message);
 		}
 	}
 
