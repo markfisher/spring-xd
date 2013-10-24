@@ -166,13 +166,12 @@ public class ModuleDeployer extends AbstractMessageHandler implements Applicatio
 			ClassLoader classLoader = (definition.getClasspath() == null) ? null
 					: new ParentLastURLClassLoader(definition.getClasspath(), parentClassLoader);
 			SimpleModule module = new SimpleModule(definition, submoduleMetadata, classLoader);
-			if (paramList != null && paramList.size() > i) {
-				Properties props = new Properties();
-				props.putAll(paramList.get(i));
-				module.addProperties(props);
-				if (logger.isDebugEnabled()) {
-					logger.debug("added properties for child module [" + module.getName() + "]: " + props);
-				}
+
+			Properties props = new Properties();
+			props.putAll(paramList.get(i));
+			module.addProperties(props);
+			if (logger.isDebugEnabled()) {
+				logger.debug("added properties for child module [" + module.getName() + "]: " + props);
 			}
 			// module.setParentContext(this.context);
 			modules.add(module);
