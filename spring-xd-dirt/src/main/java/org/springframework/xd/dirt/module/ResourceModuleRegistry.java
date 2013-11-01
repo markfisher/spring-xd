@@ -45,7 +45,7 @@ import org.springframework.xd.module.ModuleType;
  * @author Glenn Renfro
  * @author Eric Bottard
  */
-public class ResourceModuleRegistry extends AbstractModuleRegistry implements ResourceLoaderAware {
+public class ResourceModuleRegistry extends AbstractModuleRegistry<Resource> implements ResourceLoaderAware {
 
 
 	private final Resource root;

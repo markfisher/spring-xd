@@ -33,11 +33,11 @@ import org.springframework.xd.module.ModuleType;
  * @author Mark Fisher
  * @author Gary Russell
  */
-public abstract class AbstractModuleRegistry implements ModuleRegistry {
+public abstract class AbstractModuleRegistry<R extends Resource> implements ModuleRegistry {
 
 	@Override
 	public ModuleDefinition findDefinition(String name, ModuleType moduleType) {
-		Resource resource = this.locateApplicationContext(name, moduleType);
+		R resource = this.locateApplicationContext(name, moduleType);
 		if (resource == null) {
 			return null;
 		}
@@ -62,10 +62,9 @@ public abstract class AbstractModuleRegistry implements ModuleRegistry {
 	@Override
 	public List<ModuleDefinition> findDefinitions(ModuleType type) {
 		ArrayList<ModuleDefinition> results = new ArrayList<ModuleDefinition>();
-		for (Resource resource : locateApplicationContexts(type)) {
+		for (R resource : locateApplicationContexts(type)) {
 			String name = inferModuleName(resource);
-			results.add(new ModuleDefinition(name, type, resource, maybeLocateClasspath(resource, name,
-					type)));
+			results.add(new ModuleDefinition(name, type, resource, maybeLocateClasspath(resource, name, type)));
 		}
 		return results;
 	}
@@ -73,7 +72,7 @@ public abstract class AbstractModuleRegistry implements ModuleRegistry {
 	/**
 	 * Recover the name of the module, given its resource location.
 	 */
-	protected abstract String inferModuleName(Resource resource);
+	protected abstract String inferModuleName(R resource);
 
 	@Override
 	public List<ModuleDefinition> findDefinitions() {
@@ -87,18 +86,18 @@ public abstract class AbstractModuleRegistry implements ModuleRegistry {
 	/**
 	 * Return a resource pointing to an {@link ApplicationContext} XML definition file.
 	 */
-	protected abstract Resource locateApplicationContext(String name, ModuleType type);
+	protected abstract R locateApplicationContext(String name, ModuleType type);
 
 	/**
 	 * Return a list of resources pointing to {@link ApplicationContext} XML definition files.
 	 */
-	protected abstract List<Resource> locateApplicationContexts(ModuleType type);
+	protected abstract List<R> locateApplicationContexts(ModuleType type);
 
 	/**
 	 * Return an array of jar files locations or {@code null} if the module is a plain xml file. Default implementation
 	 * returns {@code null} system.
 	 */
-	protected URL[] maybeLocateClasspath(Resource resource, String name, ModuleType moduleType) {
+	protected URL[] maybeLocateClasspath(R resource, String name, ModuleType moduleType) {
 		return null;
 	}
 

@@ -18,12 +18,13 @@ package org.springframework.xd.dirt.module;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.util.Assert;
+import org.springframework.xd.dirt.module.RedisModuleRegistry.NamedByteArrayResource;
 import org.springframework.xd.module.ModuleDefinition;
 import org.springframework.xd.module.ModuleType;
 
@@ -31,7 +32,7 @@ import org.springframework.xd.module.ModuleType;
  * @author Mark Fisher
  * @author Glenn Renfro
  */
-public class RedisModuleRegistry extends AbstractModuleRegistry {
+public class RedisModuleRegistry extends AbstractModuleRegistry<NamedByteArrayResource> {
 
 	private final StringRedisTemplate redisTemplate;
 
@@ -41,15 +42,15 @@ public class RedisModuleRegistry extends AbstractModuleRegistry {
 	}
 
 	@Override
-	protected Resource locateApplicationContext(String name, ModuleType type) {
+	protected NamedByteArrayResource locateApplicationContext(String name, ModuleType type) {
 		Object config = this.redisTemplate.boundHashOps("modules:" + type).get(name);
-		return (config != null) ? new NamedByteArrayResource(config.toString().getBytes(), name) : null;
+		return (config != null) ? new NamedByteArrayResource(name, config.toString().getBytes()) : null;
 	}
 
 	@Override
 	public List<ModuleDefinition> findDefinitions(ModuleType type) {
 		ArrayList<ModuleDefinition> results = new ArrayList<ModuleDefinition>();
-		for (Resource resource : locateApplicationContexts(type)) {
+		for (NamedByteArrayResource resource : locateApplicationContexts(type)) {
 			String name = resource.getFilename().substring(0,
 					resource.getFilename().lastIndexOf('.'));
 			results.add(new ModuleDefinition(name, type, resource, maybeLocateClasspath(resource, name,
@@ -59,10 +60,10 @@ public class RedisModuleRegistry extends AbstractModuleRegistry {
 	}
 
 	@Override
-	protected List<Resource> locateApplicationContexts(ModuleType type) {
-		ArrayList<Resource> resources = new ArrayList<Resource>();
-		for (Object object : this.redisTemplate.boundHashOps("modules:" + type.name()).entries().values()) {
-			resources.add(new ByteArrayResource(object.toString().getBytes()));
+	protected List<NamedByteArrayResource> locateApplicationContexts(ModuleType type) {
+		ArrayList<NamedByteArrayResource> resources = new ArrayList<NamedByteArrayResource>();
+		for (Map.Entry<Object, Object> entry : this.redisTemplate.boundHashOps("modules:" + type.name()).entries().entrySet()) {
+			resources.add(new NamedByteArrayResource(entry.getKey().toString(), entry.getValue().toString().getBytes()));
 		}
 		return resources;
 	}
@@ -77,8 +78,8 @@ public class RedisModuleRegistry extends AbstractModuleRegistry {
 	}
 
 	@Override
-	protected String inferModuleName(Resource resource) {
-		return ((NamedByteArrayResource) resource).name;
+	protected String inferModuleName(NamedByteArrayResource resource) {
+		return resource.name;
 	}
 
 	/**
@@ -86,11 +87,11 @@ public class RedisModuleRegistry extends AbstractModuleRegistry {
 	 * 
 	 * @author Eric Bottard
 	 */
-	private static class NamedByteArrayResource extends ByteArrayResource {
+	public static class NamedByteArrayResource extends ByteArrayResource {
 
 		private final String name;
 
-		public NamedByteArrayResource(byte[] byteArray, String name) {
+		public NamedByteArrayResource(String name, byte[] byteArray) {
 			super(byteArray);
 			this.name = name;
 		}
