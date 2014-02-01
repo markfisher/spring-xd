@@ -19,7 +19,6 @@ package org.springframework.xd.tuple;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.core.convert.ConversionFailedException;
 
@@ -234,7 +233,6 @@ public interface Tuple {
 	 */
 	byte getByte(String name);
 
-
 	/**
 	 * Read the '<code>byte</code>' value at index '<code>index</code>'. using the supplied <code>defaultValue</code> if
 	 * the field value is a zero length string or null.
@@ -390,7 +388,6 @@ public interface Tuple {
 	 */
 	float getFloat(String name, float defaultValue);
 
-
 	/**
 	 * Read the '<code>double</code>' value at index '<code>index</code>'.
 	 * 
@@ -405,7 +402,6 @@ public interface Tuple {
 	 * @param name the field name.
 	 */
 	double getDouble(String name);
-
 
 	/**
 	 * Read the '<code>double</code>' value at index '<code>index</code>'. using the supplied <code>defaultValue</code>
@@ -558,27 +554,11 @@ public interface Tuple {
 
 	// Meta-data useful for stream processing
 
-	/**
-	 * Get the unique Id of this tuple, not included in comparisons for equality.
-	 * 
-	 * @return unique Id
-	 */
-	UUID getId();
-
-	/**
-	 * Get the creation timestamp of this tuple, not included in comparisons for equality
-	 * 
-	 * @return creation timestamp
-	 */
-	Long getTimestamp();
-
-
 	/*
 	 * TODO consider once tuples are being processed in some context String getStreamName();
 	 * 
 	 * String getComponentName();
 	 */
-
 
 	/* TODO consider general metadata property/hash */
 

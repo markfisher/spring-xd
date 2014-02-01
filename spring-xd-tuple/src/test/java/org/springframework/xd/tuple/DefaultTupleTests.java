@@ -18,11 +18,9 @@ package org.springframework.xd.tuple;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.xd.tuple.TupleBuilder.tuple;
@@ -95,23 +93,6 @@ public class DefaultTupleTests {
 		assertThat((String) tuple.getValue("foo"), equalTo("bar"));
 		assertThat(tuple.hasFieldName("foo"), equalTo(true));
 		// assertThat(tuple.get("foo").asString(), equalTo("bar"));
-	}
-
-	@Test
-	public void testId() {
-		Tuple tuple1 = TupleBuilder.tuple().of("foo", "bar");
-		assertThat(tuple1.getId(), notNullValue());
-		Tuple tuple2 = TupleBuilder.tuple().of("foo", "bar");
-		assertNotSame(tuple1.getId(), tuple2.getId());
-	}
-
-	@Test
-	public void testTimestamp() throws Exception {
-		Tuple tuple1 = TupleBuilder.tuple().of("foo", "bar");
-		assertThat(tuple1.getTimestamp(), notNullValue());
-		Thread.sleep(100L);
-		Tuple tuple2 = TupleBuilder.tuple().of("foo", "bar");
-		assertNotSame(tuple1.getTimestamp(), tuple2.getTimestamp());
 	}
 
 	@Test

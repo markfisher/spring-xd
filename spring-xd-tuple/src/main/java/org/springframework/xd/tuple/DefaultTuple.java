@@ -16,8 +16,6 @@
 
 package org.springframework.xd.tuple;
 
-import com.eaio.uuid.UUIDGen;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +35,8 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.format.support.FormattingConversionService;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import com.eaio.uuid.UUIDGen;
 
 /**
  * Default implementation of Tuple interface
@@ -93,26 +93,6 @@ public class DefaultTuple implements Tuple {
 	@Override
 	public int size() {
 		return values.size();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.springframework.xd.tuple.Tuple#getId()
-	 */
-	@Override
-	public UUID getId() {
-		return this.id;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.springframework.xd.tuple.Tuple#getTimestamp()
-	 */
-	@Override
-	public Long getTimestamp() {
-		return this.timestamp;
 	}
 
 	/**
