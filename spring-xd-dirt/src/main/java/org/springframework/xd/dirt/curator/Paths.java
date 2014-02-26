@@ -32,7 +32,7 @@ public class Paths {
 	/**
 	 * Map of paths to {@link org.apache.curator.utils.EnsurePath} instances.
 	 */
-	private static final ConcurrentMap<String, EnsurePath> ensurePaths = new ConcurrentHashMap<>();
+	private static final ConcurrentMap<String, EnsurePath> ensurePaths = new ConcurrentHashMap<String, EnsurePath>();
 
 	/**
 	 * Namespace path (i.e. the top node in the hierarchy) for XD nodes.
