@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,22 +19,32 @@ package org.springframework.xd.dirt.container;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.UUID;
+
+import javax.net.SocketFactory;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.RollingFileAppender;
+import org.apache.zookeeper.CreateMode;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.SmartLifecycle;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.util.Assert;
+import org.springframework.xd.dirt.curator.Paths;
 import org.springframework.xd.dirt.server.options.XDPropertyKeys;
 
 /**
@@ -49,8 +59,6 @@ public class XDContainer implements SmartLifecycle {
 
 	private static final Log logger = LogFactory.getLog(XDContainer.class);
 
-	private volatile ApplicationContext launcherContext;
-
 	/**
 	 * Base location for XD config files. Chosen so as not to collide with user provided content.
 	 */
@@ -60,10 +68,6 @@ public class XDContainer implements SmartLifecycle {
 	 * Where container related config files reside.
 	 */
 	public static final String XD_INTERNAL_CONFIG_ROOT = XD_CONFIG_ROOT + "internal/";
-
-	private static final String CORE_CONFIG = XD_INTERNAL_CONFIG_ROOT + "container.xml";
-
-	private static final String PLUGIN_CONFIGS = "classpath*:" + XD_CONFIG_ROOT + "plugins/*.xml";
 
 	private static final String LOG4J_FILE_APPENDER = "file";
 
@@ -80,19 +84,48 @@ public class XDContainer implements SmartLifecycle {
 	private volatile boolean containerRunning;
 
 	/**
+	 * ZooKeeper client connect string.
+	 * 
+	 * todo: make this pluggable
+	 */
+	private final String zookeeperClientConnectString = "localhost:2181";
+
+	/**
+	 * Curator client.
+	 */
+	private final CuratorFramework client;
+
+	/**
+	 * Curator client retry policy.
+	 * 
+	 * todo: make pluggable
+	 */
+	private final RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
+
+	/**
+	 * Connection listener for Curator client.
+	 */
+	private final ConnectionListener connectionListener = new ConnectionListener();
+
+	/**
 	 * Creates a container with a given id
 	 * 
 	 * @param id the id
 	 */
 	public XDContainer(String id) {
 		this.id = id;
+		client = CuratorFrameworkFactory.builder()
+				.namespace(Paths.XD_NAMESPACE)
+				.retryPolicy(retryPolicy)
+				.connectString(zookeeperClientConnectString).build();
+		client.getConnectionStateListenable().addListener(connectionListener);
 	}
 
 	/**
 	 * Default constructor generates a random id
 	 */
 	public XDContainer() {
-		this.id = UUID.randomUUID().toString();
+		this(UUID.randomUUID().toString());
 	}
 
 
@@ -148,11 +181,6 @@ public class XDContainer implements SmartLifecycle {
 		return containerRunning;
 	}
 
-	public void setLauncherContext(ApplicationContext context) {
-		this.launcherContext = context;
-	}
-
-
 	public void setContext(ConfigurableApplicationContext context) {
 		this.context = context;
 	}
@@ -161,21 +189,47 @@ public class XDContainer implements SmartLifecycle {
 		return this.context;
 	}
 
+	/**
+	 * This will initiate a ZooKeeper client connection if ZooKeeper appears to be available. Otherwise, since ZooKeeper
+	 * is not yet required, it will bypass that connection. In the case that it does establish a connection, the
+	 * container host and pid will be written to an ephemeral znode under /xd/containers. The name of the created node
+	 * will match this container's id.
+	 */
 	@Override
 	public void start() {
-		this.context = new ClassPathXmlApplicationContext(new String[] { CORE_CONFIG, PLUGIN_CONFIGS }, false);
-		context.setId(this.id);
-		updateLoggerFilename();
-		Assert.notNull(launcherContext, "no Container launcher ApplicationContext has been set");
-		ApplicationContext globalContext = launcherContext.getParent();
-		Assert.notNull(globalContext, "no global context has been set");
-		context.setParent(globalContext);
-		context.registerShutdownHook();
-		context.refresh();
-		this.containerRunning = true;
-		context.publishEvent(new ContainerStartedEvent(this));
-		if (logger.isInfoEnabled()) {
-			logger.info("started container: " + context.getId());
+		if (testClientConnectString()) {
+			client.start();
+		}
+		else {
+			logger.warn("ZooKeeper does not appear to be running for client connect string: "
+					+ zookeeperClientConnectString);
+		}
+	}
+
+	private void registerWithZooKeeper() {
+		try {
+			// Paths.ensurePath(client, Paths.DEPLOYMENTS);
+			Paths.ensurePath(client, Paths.CONTAINERS);
+
+			// deployments = new PathChildrenCache(client, Paths.DEPLOYMENTS + "/" + this.getId(), false);
+			// deployments.getListenable().addListener(deploymentListener);
+
+			String mxBeanName = ManagementFactory.getRuntimeMXBean().getName();
+			String tokens[] = mxBeanName.split("@");
+			StringBuilder builder = new StringBuilder()
+					.append("pid=").append(tokens[0])
+					.append(System.lineSeparator())
+					.append("host=").append(tokens[1]);
+
+			client.create().withMode(CreateMode.EPHEMERAL).forPath(
+					Paths.CONTAINERS + "/" + this.getId(), builder.toString().getBytes("UTF-8"));
+
+			// deployments.start(PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
+
+			logger.info("Started container " + this.getId() + " with attributes: " + builder);
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -231,6 +285,42 @@ public class XDContainer implements SmartLifecycle {
 
 	public String getPropertyValue(String key) {
 		return this.context.getEnvironment().getProperty(key);
+	}
+
+	private boolean testClientConnectString() {
+		for (String address : this.zookeeperClientConnectString.split(",")) {
+			String[] hostAndPort = address.trim().split(":");
+			try {
+				Socket socket = SocketFactory.getDefault().createSocket(
+						hostAndPort[0], Integer.parseInt(hostAndPort[1]));
+				socket.close();
+				return true;
+			}
+			catch (Exception e) {
+				// keep trying, will return false if all fail
+			}
+		}
+		return false;
+	}
+
+	private class ConnectionListener implements ConnectionStateListener {
+
+		@Override
+		public void stateChanged(CuratorFramework client, ConnectionState newState) {
+			switch (newState) {
+				case CONNECTED:
+				case RECONNECTED:
+					logger.info(">>> Curator connected event: " + newState);
+					registerWithZooKeeper();
+					break;
+				case LOST:
+				case SUSPENDED:
+					logger.info(">>> Curator disconnected event: " + newState);
+					break;
+				case READ_ONLY:
+					// todo: ???
+			}
+		}
 	}
 
 }

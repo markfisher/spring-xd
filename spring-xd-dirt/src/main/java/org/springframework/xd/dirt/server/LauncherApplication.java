@@ -108,6 +108,7 @@ public class LauncherApplication {
 		context.setId(container.getId());
 		container.setContext(context);
 		context.publishEvent(new ContainerStartedEvent(container));
+		container.start();
 	}
 
 	@Bean

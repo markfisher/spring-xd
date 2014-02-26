@@ -126,6 +126,7 @@ ext {
 	ftpServerVersion = '1.0.6'
 	jcloudsVersion = '1.7.0'
 	commonsVersion = '3.2'
+	curatorVersion = '2.4.0'
 }
 
 def forceSpringVersion(p) {
@@ -376,7 +377,7 @@ project('spring-xd-dirt') {
 		compile "com.lambdaworks:lettuce:$lettuceVersion"
 		compile "commons-lang:commons-lang:2.4"
 		compile "args4j:args4j:$args4jVersion"
-
+		compile "org.apache.curator:curator-recipes:$curatorVersion"
 		compile "org.hsqldb:hsqldb:$hsqldbVersion"
 		compile "org.springframework.batch:spring-batch-core:$springBatchVersion"
 		compile "org.apache.tomcat:tomcat-jdbc:$tomcatJdbcPoolVersion"
