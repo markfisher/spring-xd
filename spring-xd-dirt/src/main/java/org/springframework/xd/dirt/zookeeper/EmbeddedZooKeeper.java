@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.dirt.curator;
+package org.springframework.xd.dirt.zookeeper;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -30,19 +30,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 
 /**
- * Helper class to start an embedded instance of standalone (non clustered) ZooKeeper. NOTE: at least an external
- * standalone server (if not an ensemble) are recommended, even for
+ * Helper class to start an embedded instance of standalone (non clustered) ZooKeeper.
+ * 
+ * NOTE: at least an external standalone server (if not an ensemble) are recommended, even for
  * {@link org.springframework.xd.dirt.server.SingleNodeApplication}
  * 
  * @author Patrick Peralta
  * @author Mark Fisher
  */
-public class ZooKeeperEmbedded implements SmartLifecycle {
+public class EmbeddedZooKeeper implements SmartLifecycle {
 
 	/**
 	 * Logger.
 	 */
-	private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperEmbedded.class);
+	private static final Logger LOG = LoggerFactory.getLogger(EmbeddedZooKeeper.class);
 
 	/**
 	 * ZooKeeper client port.

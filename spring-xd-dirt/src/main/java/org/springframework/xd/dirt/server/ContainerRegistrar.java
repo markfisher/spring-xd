@@ -37,7 +37,7 @@ import org.springframework.context.SmartLifecycle;
 import org.springframework.xd.dirt.container.ContainerMetadata;
 import org.springframework.xd.dirt.container.ContainerStartedEvent;
 import org.springframework.xd.dirt.container.ContainerStoppedEvent;
-import org.springframework.xd.dirt.curator.Paths;
+import org.springframework.xd.dirt.zookeeper.Paths;
 
 /**
  * An instance of this class, registered as a bean in the context for a Container, will handle the registration of that
