@@ -38,12 +38,15 @@ import org.springframework.integration.monitor.IntegrationMBeanExporter;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.xd.dirt.container.ContainerMetadata;
+import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
+import org.springframework.xd.dirt.module.ModuleDeployer;
 import org.springframework.xd.dirt.server.options.ContainerOptions;
 import org.springframework.xd.dirt.server.options.XDPropertyKeys;
 import org.springframework.xd.dirt.util.BannerUtils;
 import org.springframework.xd.dirt.util.ConfigLocations;
 import org.springframework.xd.dirt.util.XdConfigLoggingInitializer;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
+import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
  * The boot application class for a Container server.
@@ -163,6 +166,15 @@ class ContainerConfiguration {
 	private ContainerMetadata containerMetadata;
 
 	@Autowired
+	private ModuleDefinitionRepository moduleDefinitionRepository;
+
+	@Autowired
+	private ModuleOptionsMetadataResolver moduleOptionsMetadataResolver;
+
+	@Autowired
+	private ModuleDeployer moduleDeployer;
+
+	@Autowired
 	private ZooKeeperConnection zooKeeperConnection;
 
 	@Bean
@@ -174,7 +186,11 @@ class ContainerConfiguration {
 
 	@Bean
 	public ContainerRegistrar containerRegistrar() {
-		return new ContainerRegistrar(containerMetadata, zooKeeperConnection);
+		return new ContainerRegistrar(containerMetadata,
+				moduleDefinitionRepository,
+				moduleOptionsMetadataResolver,
+				moduleDeployer,
+				zooKeeperConnection);
 	}
 
 	// TODO: Should this be removed once the control transport is removed?
