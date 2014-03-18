@@ -30,6 +30,8 @@ import org.springframework.xd.module.ModuleType;
  * @author Patrick Peralta
  * @author Mark Fisher
  */
+// todo: this should merge with and/or replace ModuleDeploymentRequest
+// (the parser will be updated to return StreamDefinition instead of List<MDR>)
 public class ModuleDescriptor {
 
 	/**
@@ -64,8 +66,11 @@ public class ModuleDescriptor {
 	 */
 	private final int count;
 
-	// todo: use this (i.e. accept key/value pairs via the constructor, setter, or adder)
 	private final Map<String, String> parameters = new HashMap<String, String>();
+
+	private String sourceChannelName;
+
+	private String sinkChannelName;
 
 	/**
 	 * Construct a ModuleDescriptor.
@@ -142,6 +147,28 @@ public class ModuleDescriptor {
 	 */
 	public int getCount() {
 		return count;
+	}
+
+	public String getSourceChannelName() {
+		return sourceChannelName;
+	}
+
+	public void setSourceChannelName(String sourceChannelName) {
+		this.sourceChannelName = sourceChannelName;
+	}
+
+	public String getSinkChannelName() {
+		return sinkChannelName;
+	}
+
+	public void setSinkChannelName(String sinkChannelName) {
+		this.sinkChannelName = sinkChannelName;
+	}
+
+	public void addParameters(Map<String, String> parameters) {
+		if (parameters != null) {
+			this.parameters.putAll(parameters);
+		}
 	}
 
 	public Map<String, String> getParameters() {

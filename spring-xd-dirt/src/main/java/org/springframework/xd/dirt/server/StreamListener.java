@@ -135,14 +135,13 @@ public class StreamListener implements PathChildrenCacheListener {
 	 */
 	private void onChildAdded(CuratorFramework client, ChildData data) throws Exception {
 		String streamName = Paths.stripPath(data.getPath());
-		Map<String, String> map = mapBytesUtility.toMap(data.getData());
-		Stream stream = streamFactory.createStream(streamName, map);
+		Stream stream = streamFactory.createStream(streamName, mapBytesUtility.toMap(data.getData()));
 
 		LOG.info("Stream definition added for {}", stream);
 
-		prepareStream(client, stream);
 		if (stream.isDeploy()) {
 			LOG.info("Deploying stream {}", stream);
+			prepareStream(client, stream);
 			deployStream(client, stream);
 		}
 	}
@@ -155,11 +154,11 @@ public class StreamListener implements PathChildrenCacheListener {
 	 */
 	private void onChildUpdated(CuratorFramework client, ChildData data) throws Exception {
 		String streamName = Paths.stripPath(data.getPath());
-		Map<String, String> map = mapBytesUtility.toMap(data.getData());
-		Stream stream = streamFactory.createStream(streamName, map);
+		Stream stream = streamFactory.createStream(streamName, mapBytesUtility.toMap(data.getData()));
 
 		if (stream.isDeploy()) {
 			LOG.info("Deploying stream {}", stream);
+			prepareStream(client, stream);
 			deployStream(client, stream);
 		}
 		else {
@@ -173,17 +172,22 @@ public class StreamListener implements PathChildrenCacheListener {
 			paths.add(new StreamsPath()
 					.setStreamName(streamName)
 					.setModuleType(Module.Type.SOURCE.toString())
-					.setModuleLabel(stream.getSource().getLabel()).build());
+					.build());
 			for (ModuleDescriptor descriptor : stream.getProcessors()) {
 				paths.add(new StreamsPath()
 						.setStreamName(streamName)
 						.setModuleType(Module.Type.PROCESSOR.toString())
-						.setModuleLabel(descriptor.getLabel()).build());
+						.setModuleLabel(descriptor.getLabel())
+						.build());
 			}
 			paths.add(new StreamsPath()
 					.setStreamName(streamName)
+					.setModuleType(Module.Type.PROCESSOR.toString())
+					.build());
+			paths.add(new StreamsPath()
+					.setStreamName(streamName)
 					.setModuleType(Module.Type.SINK.toString())
-					.setModuleLabel(stream.getSink().getLabel()).build());
+					.build());
 
 			for (String path : paths) {
 				try {

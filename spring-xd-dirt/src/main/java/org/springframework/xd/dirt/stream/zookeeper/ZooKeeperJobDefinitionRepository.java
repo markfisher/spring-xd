@@ -34,10 +34,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.xd.dirt.module.ModuleDependencyRepository;
-import org.springframework.xd.dirt.stream.StreamDefinition;
-import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
-import org.springframework.xd.dirt.stream.StreamDefinitionRepositoryUtils;
+import org.springframework.xd.dirt.stream.JobDefinition;
+import org.springframework.xd.dirt.stream.JobDefinitionRepository;
 import org.springframework.xd.dirt.util.MapBytesUtility;
 import org.springframework.xd.dirt.zookeeper.Paths;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
@@ -45,37 +43,33 @@ import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 /**
  * @author Mark Fisher
  */
-// todo: the StreamDefinitionRepository abstraction can be removed once we are fully zk-enabled since we do not need to
+// todo: the JobDefinitionRepository abstraction can be removed once we are fully zk-enabled since we do not need to
 // support multiple impls at that point
-public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepository {
+public class ZooKeeperJobDefinitionRepository implements JobDefinitionRepository {
 
-	private final Logger LOG = LoggerFactory.getLogger(ZooKeeperStreamDefinitionRepository.class);
+	private final Logger LOG = LoggerFactory.getLogger(ZooKeeperJobDefinitionRepository.class);
 
 	private final ZooKeeperConnection zkConnection;
-
-	private final ModuleDependencyRepository moduleDependencyRepository;
 
 	private final MapBytesUtility mapBytesUtility = new MapBytesUtility();
 
 	@Autowired
-	public ZooKeeperStreamDefinitionRepository(ZooKeeperConnection zkConnection,
-			ModuleDependencyRepository moduleDependencyRepository) {
+	public ZooKeeperJobDefinitionRepository(ZooKeeperConnection zkConnection) {
 		this.zkConnection = zkConnection;
-		this.moduleDependencyRepository = moduleDependencyRepository;
 	}
 
 	@Override
-	public Iterable<StreamDefinition> findAll(Sort sort) {
+	public Iterable<JobDefinition> findAll(Sort sort) {
 		throw new UnsupportedOperationException("Auto-generated method stub");
 	}
 
 	@Override
-	public Page<StreamDefinition> findAll(Pageable pageable) {
-		return new PageImpl<StreamDefinition>(this.findAll());
+	public Page<JobDefinition> findAll(Pageable pageable) {
+		return new PageImpl<JobDefinition>(this.findAll());
 	}
 
 	@Override
-	public <S extends StreamDefinition> Iterable<S> save(Iterable<S> entities) {
+	public <S extends JobDefinition> Iterable<S> save(Iterable<S> entities) {
 		List<S> results = new ArrayList<S>();
 		for (S entity : entities) {
 			results.add(this.save(entity));
@@ -84,14 +78,14 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	}
 
 	@Override
-	public <S extends StreamDefinition> S save(S entity) {
+	public <S extends JobDefinition> S save(S entity) {
 		try {
 			Map<String, String> map = new HashMap<String, String>();
 			map.put("definition", entity.getDefinition());
 			map.put("deploy", Boolean.toString(entity.isDeploy()));
 
 			CuratorFramework client = zkConnection.getClient();
-			String path = Paths.build(Paths.STREAMS, entity.getName());
+			String path = Paths.build(Paths.JOBS, entity.getName());
 			byte[] binary = mapBytesUtility.toByteArray(map);
 
 			BackgroundPathAndBytesable op = client.checkExists().forPath(path) == null
@@ -99,9 +93,7 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 
 			op.forPath(path, binary);
 
-			LOG.trace("Saved stream {} with properties {}", path, map);
-
-			StreamDefinitionRepositoryUtils.saveDependencies(moduleDependencyRepository, entity);
+			LOG.info("Saved job {} with properties {}", path, map);
 		}
 		catch (NodeExistsException e) {
 			// this exception indicates that we tried to create the
@@ -114,14 +106,14 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	}
 
 	@Override
-	public StreamDefinition findOne(String id) {
+	public JobDefinition findOne(String id) {
 		try {
-			byte[] bytes = zkConnection.getClient().getData().forPath(Paths.build(Paths.STREAMS, id));
+			byte[] bytes = zkConnection.getClient().getData().forPath(Paths.build(Paths.JOBS, id));
 			if (bytes == null) {
 				return null;
 			}
 			Map<String, String> map = this.mapBytesUtility.toMap(bytes);
-			return new StreamDefinition(id, map.get("definition"), Boolean.parseBoolean(map.get("deploy")));
+			return new JobDefinition(id, map.get("definition"), Boolean.parseBoolean(map.get("deploy")));
 		}
 		catch (NoNodeException e) {
 			return null;
@@ -134,7 +126,7 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	@Override
 	public boolean exists(String id) {
 		try {
-			return (null != zkConnection.getClient().checkExists().forPath(Paths.build(Paths.STREAMS, id)));
+			return (null != zkConnection.getClient().checkExists().forPath(Paths.build(Paths.JOBS, id)));
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -142,9 +134,9 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	}
 
 	@Override
-	public List<StreamDefinition> findAll() {
+	public List<JobDefinition> findAll() {
 		try {
-			return this.findAll(zkConnection.getClient().getChildren().forPath(Paths.STREAMS));
+			return this.findAll(zkConnection.getClient().getChildren().forPath(Paths.JOBS));
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -152,8 +144,8 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	}
 
 	@Override
-	public List<StreamDefinition> findAll(Iterable<String> ids) {
-		List<StreamDefinition> results = new ArrayList<StreamDefinition>();
+	public List<JobDefinition> findAll(Iterable<String> ids) {
+		List<JobDefinition> results = new ArrayList<JobDefinition>();
 		for (String id : ids) {
 			results.add(this.findOne(id));
 		}
@@ -163,7 +155,7 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	@Override
 	public long count() {
 		try {
-			Stat stat = zkConnection.getClient().checkExists().forPath(Paths.STREAMS);
+			Stat stat = zkConnection.getClient().checkExists().forPath(Paths.JOBS);
 			return stat == null ? 0 : stat.getNumChildren();
 		}
 		catch (Exception e) {
@@ -174,7 +166,7 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	@Override
 	public void delete(String id) {
 		try {
-			zkConnection.getClient().delete().deletingChildrenIfNeeded().forPath(Paths.build(Paths.STREAMS, id));
+			zkConnection.getClient().delete().deletingChildrenIfNeeded().forPath(Paths.build(Paths.JOBS, id));
 		}
 		catch (NoNodeException e) {
 			// ignore
@@ -185,15 +177,14 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	}
 
 	@Override
-	public void delete(StreamDefinition entity) {
+	public void delete(JobDefinition entity) {
 		this.delete(entity.getName());
-		StreamDefinitionRepositoryUtils.deleteDependencies(moduleDependencyRepository, entity);
 	}
 
 	@Override
-	public void delete(Iterable<? extends StreamDefinition> entities) {
-		for (StreamDefinition streamDefinition : entities) {
-			this.delete(streamDefinition);
+	public void delete(Iterable<? extends JobDefinition> entities) {
+		for (JobDefinition JobDefinition : entities) {
+			this.delete(JobDefinition);
 		}
 	}
 
@@ -201,8 +192,8 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	public void deleteAll() {
 		try {
 			zkConnection.getClient().inTransaction()
-					.delete().forPath(Paths.STREAMS)
-					.and().create().forPath(Paths.STREAMS)
+					.delete().forPath(Paths.JOBS)
+					.and().create().forPath(Paths.JOBS)
 					.and().commit();
 		}
 		catch (Exception e) {
@@ -211,7 +202,7 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	}
 
 	@Override
-	public Iterable<StreamDefinition> findAllInRange(String from, boolean fromInclusive, String to, boolean toInclusive) {
+	public Iterable<JobDefinition> findAllInRange(String from, boolean fromInclusive, String to, boolean toInclusive) {
 		throw new UnsupportedOperationException("Auto-generated method stub");
 	}
 

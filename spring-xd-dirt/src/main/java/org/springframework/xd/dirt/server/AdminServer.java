@@ -76,10 +76,15 @@ public class AdminServer implements ContainerRepository, ApplicationListener<Con
 
 	/**
 	 * Cache of children under the streams path. This path is used to track stream deployment requests. Marked volatile
-	 * because this reference is written by the Curator thread that handles leader election and read by public method
-	 * {@link #getStreamPaths}.
+	 * because this reference is written by the Curator thread that handles leader election.
 	 */
 	private volatile PathChildrenCache streams;
+
+	/**
+	 * Cache of children under the jobs path. This path is used to track job deployment requests. Marked volatile
+	 * because this reference is written by the Curator thread that handles leader election.
+	 */
+	private volatile PathChildrenCache jobs;
 
 	/**
 	 * Converter from {@link ChildData} types to {@link Container}.
@@ -148,6 +153,7 @@ public class AdminServer implements ContainerRepository, ApplicationListener<Con
 			Paths.ensurePath(client, Paths.DEPLOYMENTS);
 			Paths.ensurePath(client, Paths.CONTAINERS);
 			Paths.ensurePath(client, Paths.STREAMS);
+			Paths.ensurePath(client, Paths.JOBS);
 
 			if (leaderSelector == null) {
 				leaderSelector = new LeaderSelector(client, Paths.build(Paths.ADMIN), leaderListener);
@@ -198,6 +204,7 @@ public class AdminServer implements ContainerRepository, ApplicationListener<Con
 			LOG.info("Leader Admin {} is watching for stream deployment requests.", getId());
 
 			PathChildrenCacheListener streamListener = null;
+			PathChildrenCacheListener jobListener = null;
 			PathChildrenCacheListener containerListener = null;
 			try {
 				streamListener = new StreamListener(AdminServer.this, moduleDefinitionRepository,
@@ -206,6 +213,13 @@ public class AdminServer implements ContainerRepository, ApplicationListener<Con
 				streams = new PathChildrenCache(client, Paths.STREAMS, true);
 				streams.getListenable().addListener(streamListener);
 				streams.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
+
+				jobListener = new JobListener(AdminServer.this, moduleDefinitionRepository,
+						moduleOptionsMetadataResolver);
+
+				jobs = new PathChildrenCache(client, Paths.JOBS, true);
+				jobs.getListenable().addListener(jobListener);
+				jobs.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
 
 				containerListener = new ContainerListener(AdminServer.this, moduleDefinitionRepository,
 						moduleOptionsMetadataResolver, streams);
@@ -230,6 +244,11 @@ public class AdminServer implements ContainerRepository, ApplicationListener<Con
 					streams.getListenable().removeListener(streamListener);
 				}
 				streams.close();
+
+				if (jobListener != null) {
+					jobs.getListenable().removeListener(jobListener);
+				}
+				jobs.close();
 			}
 		}
 	}

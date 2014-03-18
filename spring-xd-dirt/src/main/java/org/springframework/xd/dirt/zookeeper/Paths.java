@@ -60,6 +60,11 @@ public class Paths {
 	public static final String STREAMS = "streams";
 
 	/**
+	 * Name of jobs node. Jobs are written as children of this node.
+	 */
+	public static final String JOBS = "jobs";
+
+	/**
 	 * Strip path information from a string. For example, given an input of {@code /xd/path/location}, return
 	 * {@code location}.
 	 * 

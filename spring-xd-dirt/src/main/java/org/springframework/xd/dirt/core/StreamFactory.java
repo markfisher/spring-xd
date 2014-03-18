@@ -25,6 +25,7 @@ import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
 import org.springframework.xd.dirt.stream.ParsingContext;
 import org.springframework.xd.dirt.stream.XDStreamParser;
 import org.springframework.xd.module.ModuleDefinition;
+import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
@@ -65,6 +66,20 @@ public class StreamFactory {
 			String moduleName = request.getModule();
 			String label;
 			String rawModuleDefinition = tokens[i];
+			// todo: this is a hack
+			// we need to be able to determine each module and any source/sink channel
+			// elements via the StreamDefinition once the parser returns that
+			if (i == requests.size() - 1 && rawModuleDefinition.contains(">")) {
+				if (ModuleType.sink == request.getType()) {
+					rawModuleDefinition = rawModuleDefinition.split(">")[1].trim();
+				}
+				else {
+					rawModuleDefinition = rawModuleDefinition.split(">")[0].trim();
+				}
+			}
+			else if (i == 0 && rawModuleDefinition.contains(">")) {
+				rawModuleDefinition = rawModuleDefinition.split(">")[0].trim();
+			}
 			if (rawModuleDefinition.contains(":")) {
 				String[] split = rawModuleDefinition.split("\\:");
 				label = split[0].trim();
@@ -72,11 +87,18 @@ public class StreamFactory {
 			else {
 				label = String.format("%s-%d", moduleName, i);
 			}
+			String sourceChannelName = request.getSourceChannelName();
+			if (sourceChannelName != null) {
+				builder.setSourceChannelName(sourceChannelName);
+			}
+			String sinkChannelName = request.getSinkChannelName();
+			if (sinkChannelName != null) {
+				builder.setSinkChannelName(sinkChannelName);
+			}
 			ModuleDefinition moduleDefinition = moduleDefinitionRepository.findByNameAndType(moduleName,
 					request.getType());
-			builder.addModuleDefinition(label, moduleDefinition);
+			builder.addModuleDefinition(label, moduleDefinition, request.getParameters());
 		}
-
 		return builder.build();
 	}
 

@@ -53,7 +53,8 @@ public class SingleNodeApplication {
 		// todo: only register EmbeddedZooKeeper bean if no zk connect string is provided
 		// (use @ConditionalOnExpression at class level on EmbeddedZooKeeper itself?)
 		SpringApplicationBuilder admin =
-				new SpringApplicationBuilder(SingleNodeOptions.class, ParentConfiguration.class, EmbeddedZooKeeper.class)
+				new SpringApplicationBuilder(SingleNodeOptions.class, ParentConfiguration.class,
+						EmbeddedZooKeeper.class)
 						.listeners(bootstrapContext.commandLineListener())
 						.profiles(AdminServerApplication.ADMIN_PROFILE, SINGLE_PROFILE)
 						.child(SingleNodeOptions.class, AdminServerApplication.class)
@@ -117,14 +118,11 @@ public class SingleNodeApplication {
 				"containerControlChannel", MessageChannel.class);
 		SubscribableChannel deployChannel = adminContext.getBean(
 				"deployChannel", SubscribableChannel.class);
-		SubscribableChannel undeployChannel = adminContext.getBean(
-				"undeployChannel", SubscribableChannel.class);
 
 		BridgeHandler handler = new BridgeHandler();
 		handler.setOutputChannel(containerControlChannel);
 		handler.setComponentName("xd.local.control.bridge");
 		deployChannel.subscribe(handler);
-		undeployChannel.subscribe(handler);
 	}
 
 }
