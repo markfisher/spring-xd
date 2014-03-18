@@ -28,6 +28,7 @@ import java.util.NoSuchElementException;
 
 import org.springframework.util.Assert;
 import org.springframework.xd.module.ModuleDefinition;
+import org.springframework.xd.module.ModuleType;
 
 //todo: decide if a Stream really should provide ContainerMatcher (as done in the prototype)
 
@@ -54,6 +55,11 @@ public class Stream {
 	private final ModuleDescriptor source;
 
 	/**
+	 * Source channel for this stream (only present if no source module).
+	 */
+	private final String sourceChannelName;
+
+	/**
 	 * Ordered list of processor modules. The data obtained by the source module will be fed to these processors in the
 	 * order indicated by this list.
 	 */
@@ -65,6 +71,11 @@ public class Stream {
 	private final ModuleDescriptor sink;
 
 	/**
+	 * Sink channel for this stream (only present if no sink module).
+	 */
+	private final String sinkChannelName;
+
+	/**
 	 * Properties for this stream.
 	 */
 	private final Map<String, String> properties;
@@ -74,18 +85,22 @@ public class Stream {
 	 * 
 	 * @param name stream name
 	 * @param source source module
+	 * @param sourceChannelName source channel
 	 * @param processors processor modules
 	 * @param sink sink module
+	 * @param sinkChannelName sink channel
 	 * @param properties stream properties
 	 */
-	private Stream(String name, ModuleDescriptor source, List<ModuleDescriptor> processors,
-			ModuleDescriptor sink, Map<String, String> properties) {
+	private Stream(String name, ModuleDescriptor source, String sourceChannelName, List<ModuleDescriptor> processors,
+			ModuleDescriptor sink, String sinkChannelName, Map<String, String> properties) {
 		this.name = name;
 		this.source = source;
+		this.sourceChannelName = sourceChannelName;
 		this.processors = new LinkedList<ModuleDescriptor>(processors == null
 				? Collections.<ModuleDescriptor> emptyList()
 				: processors);
 		this.sink = sink;
+		this.sinkChannelName = sinkChannelName;
 		this.properties = properties;
 		this.definition = properties.get("definition");
 		Assert.hasText(this.definition, "Stream properties require a 'definition' value");
@@ -110,6 +125,15 @@ public class Stream {
 	}
 
 	/**
+	 * Return the source channel for this stream (only present if no source module).
+	 * 
+	 * @return source channel name
+	 */
+	public String getSourceChannelName() {
+		return sourceChannelName;
+	}
+
+	/**
 	 * Return the ordered list of processors for this stream.
 	 * 
 	 * @return list of processors
@@ -128,13 +152,23 @@ public class Stream {
 	}
 
 	/**
+	 * Return the sink channel for this stream (only present if no sink module).
+	 * 
+	 * @return sink channel name
+	 */
+	public String getSinkChannelName() {
+		return sinkChannelName;
+	}
+
+	/**
 	 * Return true if this stream should be deployed.
-	 *
+	 * 
 	 * @return true if this stream should be deployed
 	 */
 	public boolean isDeploy() {
 		return Boolean.parseBoolean(properties.get("deploy"));
 	}
+
 	/**
 	 * Return an iterator that indicates the order of module deployments for this stream. The modules are returned in
 	 * reverse order; i.e. the sink is returned first followed by the processors in reverse order followed by the
@@ -186,7 +220,6 @@ public class Stream {
 		if (moduleDescriptor == null || !moduleLabel.equals(moduleDescriptor.getLabel())) {
 			throw new IllegalArgumentException(String.format("Module %s of type %s not found", moduleLabel, moduleType));
 		}
-
 		return moduleDescriptor;
 	}
 
@@ -266,10 +299,23 @@ public class Stream {
 			switch (state) {
 				case INITIAL:
 					state = IteratorState.PROC_ITERATOR_ACTIVE;
-					return sink;
+					if (sink != null) {
+						if (!processorIterator.hasNext() && source == null) {
+							// no processors and no source (named channel instead)
+							state = IteratorState.LAST_ITERATED;
+						}
+						return sink;
+					}
+					// no sink (named channel instead), skip ahead
+					return next();
 				case PROC_ITERATOR_ACTIVE:
 					if (processorIterator.hasNext()) {
-						return processorIterator.next();
+						ModuleDescriptor descriptor = processorIterator.next();
+						if (!processorIterator.hasNext() && source == null) {
+							// no processors and no source (named channel instead)
+							state = IteratorState.LAST_ITERATED;
+						}
+						return descriptor;
 					}
 					else {
 						state = IteratorState.LAST_ITERATED;
@@ -304,9 +350,24 @@ public class Stream {
 		private String name;
 
 		/**
+		 * Source channel name.
+		 */
+		private String sourceChannelName;
+
+		/**
+		 * Sink channel name.
+		 */
+		private String sinkChannelName;
+
+		/**
 		 * Map of module labels to module definitions.
 		 */
 		private Map<String, ModuleDefinition> moduleDefinitions = new LinkedHashMap<String, ModuleDefinition>();
+
+		/**
+		 * Map of module labels to module parameters.
+		 */
+		private Map<String, Map<String, String>> moduleParameters = new LinkedHashMap<String, Map<String, String>>();
 
 		/**
 		 * Stream properties
@@ -326,6 +387,35 @@ public class Stream {
 		}
 
 		/**
+		 * Set the source channel name.
+		 * 
+		 * @param name source channel name
+		 * 
+		 * @return this builder
+		 */
+		public Builder setSourceChannelName(String sourceChannelName) {
+			Assert.isTrue(moduleDefinitions.isEmpty() || ModuleType.source != moduleDefinitions.get(0).getType(),
+					"cannot have both a source module and a source channel");
+			this.sourceChannelName = sourceChannelName;
+			return this;
+		}
+
+		/**
+		 * Set the sink channel name.
+		 * 
+		 * @param name sink channel name
+		 * 
+		 * @return this builder
+		 */
+		public Builder setSinkChannelName(String sinkChannelName) {
+			Assert.isTrue(moduleDefinitions.isEmpty()
+					|| ModuleType.sink != moduleDefinitions.get(moduleDefinitions.size() - 1).getType(),
+					"cannot have both a sink module and a sink channel");
+			this.sinkChannelName = sinkChannelName;
+			return this;
+		}
+
+		/**
 		 * Add a module definition to this stream builder. Processor modules will be added to the stream in the order
 		 * they are added to this builder.
 		 * 
@@ -333,11 +423,19 @@ public class Stream {
 		 * @param moduleDefinition module definition to add
 		 * @return this builder
 		 */
-		public Builder addModuleDefinition(String label, ModuleDefinition moduleDefinition) {
+		public Builder addModuleDefinition(String label, ModuleDefinition moduleDefinition,
+				Map<String, String> parameters) {
 			if (moduleDefinitions.containsKey(label)) {
 				throw new IllegalArgumentException(String.format("Label %s already in use", label));
 			}
+			if (ModuleType.source == moduleDefinition.getType()) {
+				Assert.isNull(sourceChannelName, "cannot have both a source module and a source channel");
+			}
+			if (ModuleType.sink == moduleDefinition.getType()) {
+				Assert.isNull(sinkChannelName, "cannot have both a sink module and a sink channel");
+			}
 			moduleDefinitions.put(label, moduleDefinition);
+			moduleParameters.put(label, parameters);
 			return this;
 		}
 
@@ -372,7 +470,16 @@ public class Stream {
 				String group = properties.get(String.format("module.%s.group", moduleDefinition.getName()));
 				int count = convert(properties.get(String.format("module.%s.count", moduleDefinition.getName())));
 
-				ModuleDescriptor descriptor = new ModuleDescriptor(moduleDefinition, name, label, i--, group, count);
+				ModuleDescriptor descriptor = new ModuleDescriptor(moduleDefinition, name, label, i, group, count);
+				// todo: cleanup (and if we do use i here, consider having it in the for loop itself)
+				if (i == moduleDefinitions.size() - 1 && sinkChannelName != null) {
+					descriptor.setSinkChannelName(sinkChannelName);
+				}
+				else if (i == 0 && sourceChannelName != null) {
+					descriptor.setSourceChannelName(sourceChannelName);
+				}
+				i--;
+				descriptor.addParameters(moduleParameters.get(label));
 				switch (moduleDefinition.getType()) {
 					case source:
 						sourceDescriptor = descriptor;
@@ -385,10 +492,11 @@ public class Stream {
 				}
 			}
 
-			Assert.notNull(sourceDescriptor);
-			Assert.notNull(sinkDescriptor);
+			Assert.isTrue(sourceDescriptor != null || sourceChannelName != null);
+			Assert.notNull(sinkDescriptor != null || sinkChannelName != null);
 
-			return new Stream(name, sourceDescriptor, processorDescriptors, sinkDescriptor, properties);
+			return new Stream(name, sourceDescriptor, sourceChannelName, processorDescriptors, sinkDescriptor,
+					sinkChannelName, properties);
 		}
 
 		/**

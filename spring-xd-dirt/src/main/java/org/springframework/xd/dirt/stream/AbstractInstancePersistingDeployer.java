@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,9 +37,9 @@ public abstract class AbstractInstancePersistingDeployer<D extends BaseDefinitio
 	protected DomainRepository<I, String> instanceRepository;
 
 	protected AbstractInstancePersistingDeployer(PagingAndSortingRepository<D, String> definitionRespository,
-			DomainRepository<I, String> instanceRepository, DeploymentMessageSender messageSender, XDParser parser,
+			DomainRepository<I, String> instanceRepository, XDParser parser,
 			ParsingContext definitionKind) {
-		super(definitionRespository, messageSender, parser, definitionKind);
+		super(definitionRespository, parser, definitionKind);
 		this.instanceRepository = instanceRepository;
 	}
 

@@ -19,6 +19,7 @@ package org.springframework.xd.dirt.server;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +37,7 @@ import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -44,23 +46,30 @@ import org.springframework.xd.dirt.container.ContainerMetadata;
 import org.springframework.xd.dirt.container.ContainerStartedEvent;
 import org.springframework.xd.dirt.container.ContainerStoppedEvent;
 import org.springframework.xd.dirt.core.DeploymentsPath;
+import org.springframework.xd.dirt.core.JobsPath;
 import org.springframework.xd.dirt.core.ModuleDescriptor;
 import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.core.StreamFactory;
 import org.springframework.xd.dirt.core.StreamsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
 import org.springframework.xd.dirt.module.ModuleDeployer;
+import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.stream.ParsingContext;
+import org.springframework.xd.dirt.stream.XDParser;
+import org.springframework.xd.dirt.stream.XDStreamParser;
 import org.springframework.xd.dirt.util.MapBytesUtility;
 import org.springframework.xd.dirt.zookeeper.Paths;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnectionListener;
 import org.springframework.xd.module.DeploymentMetadata;
+import org.springframework.xd.module.ModuleDefinition;
 import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.core.Module;
 import org.springframework.xd.module.core.SimpleModule;
 import org.springframework.xd.module.options.ModuleOptions;
 import org.springframework.xd.module.options.ModuleOptionsMetadata;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
+import org.springframework.xd.module.support.ParentLastURLClassLoader;
 
 /**
  * An instance of this class, registered as a bean in the context for a Container, will handle the registration of that
@@ -73,7 +82,7 @@ import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
  */
 // todo: Rename ContainerServer or ModuleDeployer since it's driven by callbacks and not really a "server".
 // Likewise consider the AdminServer being renamed to StreamDeployer since that is also callback-driven.
-public class ContainerRegistrar implements ApplicationListener<ContextRefreshedEvent> {
+public class ContainerRegistrar implements ApplicationListener<ContextRefreshedEvent>, BeanClassLoaderAware {
 
 	/**
 	 * Logger.
@@ -102,6 +111,11 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	private final StreamModuleWatcher streamModuleWatcher = new StreamModuleWatcher();
 
 	/**
+	 * Watcher for modules deployed to this container under the {@link Paths#JOBS} location.
+	 */
+	private final JobModuleWatcher jobModuleWatcher = new JobModuleWatcher();
+
+	/**
 	 * Cache of children under the deployments path.
 	 */
 	private volatile PathChildrenCache deployments;
@@ -110,6 +124,11 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * Utility to convert maps to byte arrays.
 	 */
 	private final MapBytesUtility mapBytesUtility = new MapBytesUtility();
+
+	/**
+	 * ModuleDefinition repository
+	 */
+	private final ModuleDefinitionRepository moduleDefinitionRepository;
 
 	/**
 	 * Module options metadata resolver.
@@ -139,6 +158,10 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	private final ModuleDeployer moduleDeployer;
 
+	private ClassLoader parentClassLoader;
+
+	private final XDParser parser;
+
 	/**
 	 * Create an instance that will register the provided {@link ContainerMetadata} whenever the underlying
 	 * {@link ZooKeeperConnection} is established. If that connection is already established at the time this instance
@@ -154,10 +177,12 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		this.zkConnection = zkConnection;
 		// todo: support groups (see the ctor for ContainerServer in xdzk)
 		this.groups = Collections.emptySet();
+		this.moduleDefinitionRepository = moduleDefinitionRepository;
 		this.moduleOptionsMetadataResolver = moduleOptionsMetadataResolver;
 		this.moduleDeployer = moduleDeployer;
 		// todo: the streamFactory should be injected
 		this.streamFactory = new StreamFactory(moduleDefinitionRepository, moduleOptionsMetadataResolver);
+		this.parser = new XDStreamParser(moduleDefinitionRepository, moduleOptionsMetadataResolver);
 	}
 
 	/**
@@ -167,11 +192,8 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 */
 	private void deployModule(ModuleDescriptor moduleDescriptor) {
 		LOG.info("Deploying module {}", moduleDescriptor);
-
 		mapDeployedModules.put(moduleDescriptor.newKey(), moduleDescriptor);
-
-		ModuleOptions moduleOptions = safeModuleOptionsInterpolate(moduleDescriptor);
-		Module module = createSimpleModule(moduleDescriptor, moduleOptions);
+		Module module = createSimpleModule(moduleDescriptor);
 		// todo: rather than delegate, merge ContainerRegistrar itself into and remove most of ModuleDeployer
 		this.moduleDeployer.deployAndStore(module, moduleDescriptor);
 	}
@@ -207,6 +229,14 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			}
 			zkConnection.addListener(new ContainerMetadataRegisteringZooKeeperConnectionListener());
 		}
+	}
+
+	/**
+	 * Set the bean ClassLoader as the parent ClassLoader.
+	 */
+	@Override
+	public void setBeanClassLoader(ClassLoader classLoader) {
+		this.parentClassLoader = classLoader;
 	}
 
 	/**
@@ -289,7 +319,49 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		String streamName = deploymentsPath.getStreamName();
 		String moduleType = deploymentsPath.getModuleType();
 		String moduleLabel = deploymentsPath.getModuleLabel();
+		if (ModuleType.job.toString().equals(moduleType)) {
+			deployJob(client, streamName, moduleLabel);
+		}
+		else {
+			deployStreamModule(client, streamName, moduleType, moduleLabel);
+		}
+	}
 
+	private void deployJob(CuratorFramework client, String jobName, String jobLabel) {
+		LOG.info("Deploying job '{}'", jobName);
+
+		String jobPath = new JobsPath().setJobName(jobName)
+				.setModuleLabel(jobLabel)
+				.setContainer(containerMetadata.getId()).build();
+
+		Map<String, String> map;
+		try {
+			map = mapBytesUtility.toMap(client.getData().forPath(Paths.build(Paths.JOBS, jobName)));
+
+			// this indicates that the container has deployed the module
+			client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
+					.forPath(jobPath, mapBytesUtility.toByteArray(Collections.singletonMap("state", "deployed")));
+
+			// set a watch on this module in the job path;
+			// if the node is deleted this indicates an undeployment
+			client.getData().usingWatcher(jobModuleWatcher).forPath(jobPath);
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		// todo: do we need something like StreamFactory for jobs, or is that overkill?
+		String jobModuleName = jobLabel.substring(0, jobLabel.lastIndexOf('-'));
+		ModuleDefinition moduleDefinition = this.moduleDefinitionRepository.findByNameAndType(jobModuleName,
+				ModuleType.job);
+		List<ModuleDeploymentRequest> requests = this.parser.parse(jobName, map.get("definition"), ParsingContext.job);
+		ModuleDeploymentRequest request = requests.get(0);
+		ModuleDescriptor moduleDescriptor = new ModuleDescriptor(moduleDefinition, request.getGroup(), jobName,
+				request.getIndex(), null, 1);
+		moduleDescriptor.addParameters(request.getParameters());
+		deployModule(moduleDescriptor);
+	}
+
+	private void deployStreamModule(CuratorFramework client, String streamName, String moduleType, String moduleLabel) {
 		LOG.info("Deploying module '{}' for stream '{}'", moduleLabel, streamName);
 
 		String streamPath = new StreamsPath().setStreamName(streamName)
@@ -336,26 +408,35 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 		undeployModule(moduleLabel, moduleType);
 
-		String streamsPath = new StreamsPath()
-				.setStreamName(deploymentsPath.getStreamName())
-				.setModuleType(moduleType)
-				.setModuleLabel(moduleLabel)
-				.setContainer(containerMetadata.getId()).build();
-
-		if (client.checkExists().forPath(streamsPath) != null) {
-			LOG.trace("Deleting path: {}", streamsPath);
-			client.delete().forPath(streamsPath);
+		String path = null;
+		if (ModuleType.job.toString().equals(moduleType)) {
+			path = new JobsPath().setJobName(deploymentsPath.getStreamName())
+					.setModuleLabel(moduleLabel)
+					.setContainer(containerMetadata.getId()).build();
+		}
+		else {
+			path = new StreamsPath().setStreamName(deploymentsPath.getStreamName())
+					.setModuleType(moduleType)
+					.setModuleLabel(moduleLabel)
+					.setContainer(containerMetadata.getId()).build();
+		}
+		if (client.checkExists().forPath(path) != null) {
+			LOG.trace("Deleting path: {}", path);
+			client.delete().forPath(path);
 		}
 	}
 
-	private Module createSimpleModule(ModuleDescriptor descriptor, ModuleOptions moduleOptions) {
+	private Module createSimpleModule(ModuleDescriptor descriptor) {
+		ModuleOptions moduleOptions = this.safeModuleOptionsInterpolate(descriptor);
 		String streamName = descriptor.getStreamName();
 		int index = descriptor.getIndex();
-		String sourceChannelName = null;
-		String sinkChannelName = null;
+		String sourceChannelName = descriptor.getSourceChannelName();
+		String sinkChannelName = descriptor.getSinkChannelName();
 		DeploymentMetadata metadata = new DeploymentMetadata(streamName, index, sourceChannelName, sinkChannelName);
-		ClassLoader classLoader = null;
-		Module module = new SimpleModule(descriptor.getModuleDefinition(), metadata, classLoader, moduleOptions);
+		ModuleDefinition definition = descriptor.getModuleDefinition();
+		ClassLoader classLoader = (definition.getClasspath() == null) ? null
+				: new ParentLastURLClassLoader(definition.getClasspath(), parentClassLoader);
+		Module module = new SimpleModule(definition, metadata, classLoader, moduleOptions);
 		return module;
 	}
 
@@ -400,6 +481,44 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 						.setContainer(containerMetadata.getId())
 						.setStreamName(streamName)
 						.setModuleType(moduleType)
+						.setModuleLabel(moduleLabel).build();
+
+				CuratorFramework client = zkConnection.getClient();
+				if (client.checkExists().forPath(deploymentPath) != null) {
+					LOG.trace("Deleting path: {}", deploymentPath);
+					client.delete().forPath(deploymentPath);
+				}
+			}
+			else {
+				// this watcher is only interested in deletes for the purposes of undeploying modules;
+				// if any other change occurs the watch needs to be reestablished
+				zkConnection.getClient().getData().usingWatcher(this).forPath(event.getPath());
+			}
+		}
+	}
+
+	/**
+	 * Watcher for the modules deployed to this container under the {@link Paths#JOBS} location. If the node is deleted,
+	 * this container will undeploy the module.
+	 */
+	class JobModuleWatcher implements CuratorWatcher {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public void process(WatchedEvent event) throws Exception {
+			if (event.getType() == Watcher.Event.EventType.NodeDeleted) {
+				JobsPath jobsPath = new JobsPath(event.getPath());
+				String jobName = jobsPath.getJobName();
+				String moduleLabel = jobsPath.getModuleLabel();
+
+				undeployModule(jobName, ModuleType.job.toString());
+
+				String deploymentPath = new DeploymentsPath()
+						.setContainer(containerMetadata.getId())
+						.setStreamName(jobName)
+						.setModuleType(ModuleType.job.toString())
 						.setModuleLabel(moduleLabel).build();
 
 				CuratorFramework client = zkConnection.getClient();

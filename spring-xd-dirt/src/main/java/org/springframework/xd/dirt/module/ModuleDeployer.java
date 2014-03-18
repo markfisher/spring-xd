@@ -37,7 +37,6 @@ import org.springframework.core.OrderComparator;
 import org.springframework.integration.handler.AbstractMessageHandler;
 import org.springframework.messaging.Message;
 import org.springframework.util.Assert;
-import org.springframework.validation.BindException;
 import org.springframework.xd.dirt.core.ModuleDescriptor;
 import org.springframework.xd.dirt.event.ModuleDeployedEvent;
 import org.springframework.xd.dirt.event.ModuleUndeployedEvent;
@@ -50,8 +49,6 @@ import org.springframework.xd.module.core.Module;
 import org.springframework.xd.module.core.Plugin;
 import org.springframework.xd.module.core.SimpleModule;
 import org.springframework.xd.module.options.ModuleOptions;
-import org.springframework.xd.module.options.ModuleOptionsMetadata;
-import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 import org.springframework.xd.module.support.ParentLastURLClassLoader;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -85,14 +82,9 @@ public class ModuleDeployer extends AbstractMessageHandler implements Applicatio
 
 	private ClassLoader parentClassLoader;
 
-	private final ModuleOptionsMetadataResolver moduleOptionsMetadataResolver;
-
-	public ModuleDeployer(ModuleDefinitionRepository moduleDefinitionRepository,
-			ModuleOptionsMetadataResolver moduleOptionsMetadataResolver) {
+	public ModuleDeployer(ModuleDefinitionRepository moduleDefinitionRepository) {
 		Assert.notNull(moduleDefinitionRepository, "moduleDefinitionRepository must not be null");
-		Assert.notNull(moduleOptionsMetadataResolver, "moduleOptionsMetadataResolver must not be null");
 		this.moduleDefinitionRepository = moduleDefinitionRepository;
-		this.moduleOptionsMetadataResolver = moduleOptionsMetadataResolver;
 	}
 
 	public Map<String, Map<Integer, Module>> getDeployedModules() {
@@ -135,46 +127,15 @@ public class ModuleDeployer extends AbstractMessageHandler implements Applicatio
 		this.parentClassLoader = classLoader;
 	}
 
+	// todo: remove this once the job launching is replaced with messages via MessageBus
 	@Override
 	protected synchronized void handleMessageInternal(Message<?> message) throws Exception {
 		String payloadString = message.getPayload().toString();
 		ModuleDeploymentRequest request = this.mapper.readValue(payloadString, ModuleDeploymentRequest.class);
-
-		if (request.isRemove()) {
-			handleUndeploy(request.getGroup(), request.getIndex());
-		}
-		else if (request.isLaunch()) {
+		if (request.isLaunch()) {
 			Assert.isTrue(!(request instanceof CompositeModuleDeploymentRequest));
 			handleLaunch(request);
 		}
-		else {
-			handleDeploy(request);
-		}
-	}
-
-	/**
-	 * Takes a request and returns an instance of {@link ModuleOptions} bound with the request parameters. Binding is
-	 * assumed to not fail, as it has already been validated on the admin side.
-	 */
-	private ModuleOptions safeModuleOptionsInterpolate(ModuleDeploymentRequest request) {
-		String name = request.getModule();
-		ModuleType type = request.getType();
-		ModuleDefinition definition = this.moduleDefinitionRepository.findByNameAndType(name, type);
-		Map<String, String> parameters = request.getParameters();
-		ModuleOptionsMetadata moduleOptionsMetadata = moduleOptionsMetadataResolver.resolve(definition);
-		try {
-			return moduleOptionsMetadata.interpolate(parameters);
-		}
-		catch (BindException e) {
-			// Can't happen as parser should have already validated options
-			throw new IllegalStateException(e);
-		}
-	}
-
-	private void handleDeploy(ModuleDeploymentRequest request) {
-		ModuleOptions moduleOptions = safeModuleOptionsInterpolate(request);
-		Module module = createModule(request, moduleOptions);
-		this.deployAndStore(module, request.getGroup(), request.getIndex());
 	}
 
 	private Module createModule(ModuleDeploymentRequest request, ModuleOptions moduleOptions) {
