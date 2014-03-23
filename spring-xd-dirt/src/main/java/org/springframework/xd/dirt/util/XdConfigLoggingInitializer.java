@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.xd.dirt.server.options.ContainerOptions;
 import org.springframework.xd.dirt.server.options.HadoopDistro;
-
 
 /**
  * Initializer that can print useful stuff about an XD context on startup.
@@ -61,13 +60,12 @@ public class XdConfigLoggingInitializer implements ApplicationListener<ContextRe
 
 	@Override
 	public void onApplicationEvent(ContextRefreshedEvent event) {
-		logger.info("XD home: " + environment.resolvePlaceholders("${XD_HOME}"));
+		logger.info("XD Home: " + environment.resolvePlaceholders("${XD_HOME}"));
 		if (isContainer) {
-			logger.info("Data Transport: " + environment.resolvePlaceholders("${XD_TRANSPORT}"));
+			logger.info("Transport: " + environment.resolvePlaceholders("${XD_TRANSPORT}"));
 			logHadoopDistro();
 		}
 		logZkConnectString();
-		logger.info("Control Transport: " + environment.resolvePlaceholders("${XD_CONTROL_TRANSPORT}"));
 		logger.info("Store: " + environment.resolvePlaceholders("${XD_STORE}"));
 		logger.info("Analytics: " + environment.resolvePlaceholders("${XD_ANALYTICS}"));
 	}
