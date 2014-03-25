@@ -71,14 +71,17 @@ public class ZookeeperClientConnectTests {
 		System.clearProperty("zk.embedded.server.port");
 	}
 
+
 	@Test
 	public void testZooKeeperClientConnectString() {
 		// String zkClientConnect = "localhost:2181, localhost:2182, localhost:2183";
 		String zkClientConnect = "localhost:2181";
 		setUp(zkClientConnect, null);
+
 		ZooKeeperConnection zooKeeperConnection = this.containerContext.getBean(ZooKeeperConnection.class);
 		zooKeeperConnection.start();
 		assertFalse(zooKeeperConnection.getRetryPolicy().allowRetry(0, 0, null));
+
 		String actualCLientConnect = this.containerContext.getEnvironment().getProperty("zk.client.connect");
 		assertEquals(zkClientConnect, actualCLientConnect);
 		try {
