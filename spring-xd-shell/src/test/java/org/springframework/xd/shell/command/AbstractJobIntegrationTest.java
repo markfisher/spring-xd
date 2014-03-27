@@ -238,7 +238,8 @@ public abstract class AbstractJobIntegrationTest extends AbstractShellIntegratio
 	}
 
 	private Table listJobs() {
-		return (Table) getShell().executeCommand("job list").getResult();
+		Object result = getShell().executeCommand("job list").getResult();
+		return (result instanceof Table) ? (Table) result : new Table();
 	}
 
 	private void copyTaskletDescriptorsToServer(String inFile, String outFile) {
