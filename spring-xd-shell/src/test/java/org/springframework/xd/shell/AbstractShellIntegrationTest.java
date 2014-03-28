@@ -23,13 +23,23 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 
@@ -38,8 +48,13 @@ import org.springframework.shell.core.CommandResult;
 import org.springframework.shell.core.JLineShellComponent;
 import org.springframework.util.AlternativeJdkIdGenerator;
 import org.springframework.util.IdGenerator;
+import org.springframework.xd.dirt.container.ContainerMetadata;
 import org.springframework.xd.dirt.container.store.RedisRuntimeContainerInfoRepository;
+import org.springframework.xd.dirt.core.DeploymentsPath;
 import org.springframework.xd.dirt.server.SingleNodeApplication;
+import org.springframework.xd.dirt.zookeeper.Paths;
+import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
+import org.springframework.xd.dirt.zookeeper.ZooKeeperConnectionListener;
 import org.springframework.xd.test.RandomConfigurationSupport;
 import org.springframework.xd.test.redis.RedisTestSupport;
 
@@ -88,6 +103,14 @@ public abstract class AbstractShellIntegrationTest {
 
 	private static RedisRuntimeContainerInfoRepository runtimeInformationRepository;
 
+	private PathChildrenCache deploymentsCache;
+
+	protected DeploymentsListener deploymentsListener;
+
+	private ZooKeeperConnection zooKeeperConnection;
+
+	private ConnectionListener connectionListener = new ConnectionListener();
+
 	@BeforeClass
 	public static synchronized void startUp() throws InterruptedException, IOException {
 		RandomConfigurationSupport randomConfigSupport = new RandomConfigurationSupport();
@@ -104,6 +127,62 @@ public abstract class AbstractShellIntegrationTest {
 		}
 		if (!shell.isRunning()) {
 			shell.start();
+		}
+	}
+
+	/**
+	 * Add a {@link PathChildrenCacheListener} for the deployments path.
+	 */
+	@Before
+	public void setupDeploymentListener() {
+		zooKeeperConnection = application.adminContext().getBean(ZooKeeperConnection.class);
+		zooKeeperConnection.addListener(connectionListener);
+		if (zooKeeperConnection.isConnected()) {
+			connectionListener.onConnect(zooKeeperConnection.getClient());
+		}
+		else {
+			zooKeeperConnection.start();
+		}
+		for (int i = 0; !zooKeeperConnection.isConnected() && i < 100; i++) {
+			try {
+				Thread.sleep(100);
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				break;
+			}
+		}
+	}
+
+	private class ConnectionListener implements ZooKeeperConnectionListener {
+
+		@Override
+		public void onConnect(CuratorFramework client) {
+			if (deploymentsListener != null) {
+				return;
+			}
+			deploymentsListener = new DeploymentsListener();
+			ContainerMetadata cm = application.containerContext().getBean(ContainerMetadata.class);
+			String path = Paths.build(Paths.DEPLOYMENTS, cm.getId());
+			deploymentsCache = new PathChildrenCache(zooKeeperConnection.getClient(), path, true);
+			deploymentsCache.getListenable().addListener(deploymentsListener);
+			try {
+				deploymentsCache.start();
+			}
+			catch (Exception e) {
+				throw e instanceof RuntimeException ? ((RuntimeException) e) : new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public void onDisconnect(CuratorFramework client) {
+			try {
+				deploymentsCache.close();
+			}
+			catch (IOException e) {
+				// ignore
+			}
+			deploymentsListener = null;
 		}
 	}
 
@@ -206,4 +285,91 @@ public abstract class AbstractShellIntegrationTest {
 		}
 	}
 
+
+	protected static class DeploymentsListener implements PathChildrenCacheListener {
+
+		private ConcurrentMap<String, LinkedBlockingQueue<PathChildrenCacheEvent>> jobDeployQueues = new ConcurrentHashMap<String, LinkedBlockingQueue<PathChildrenCacheEvent>>();
+
+		private ConcurrentMap<String, LinkedBlockingQueue<PathChildrenCacheEvent>> jobUndeployQueues = new ConcurrentHashMap<String, LinkedBlockingQueue<PathChildrenCacheEvent>>();
+
+		private ConcurrentMap<String, LinkedBlockingQueue<PathChildrenCacheEvent>> streamDeployQueues = new ConcurrentHashMap<String, LinkedBlockingQueue<PathChildrenCacheEvent>>();
+
+		private ConcurrentMap<String, LinkedBlockingQueue<PathChildrenCacheEvent>> streamUndeployQueues = new ConcurrentHashMap<String, LinkedBlockingQueue<PathChildrenCacheEvent>>();
+
+		@Override
+		public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
+			DeploymentsPath path = new DeploymentsPath(event.getData().getPath());
+			LinkedBlockingQueue<PathChildrenCacheEvent> queue = null;
+			if (event.getType().equals(Type.CHILD_ADDED)) {
+				if ("job".equals(path.getModuleType())) {
+					jobDeployQueues.putIfAbsent(path.getStreamName(), new LinkedBlockingQueue<PathChildrenCacheEvent>());
+					queue = jobDeployQueues.get(path.getStreamName());
+				}
+				else {
+					streamDeployQueues.putIfAbsent(path.getStreamName(),
+							new LinkedBlockingQueue<PathChildrenCacheEvent>());
+					queue = streamDeployQueues.get(path.getStreamName());
+				}
+			}
+			else if (event.getType().equals(Type.CHILD_REMOVED)) {
+				if ("job".equals(path.getModuleType())) {
+					jobUndeployQueues.putIfAbsent(path.getStreamName(),
+							new LinkedBlockingQueue<PathChildrenCacheEvent>());
+					queue = jobUndeployQueues.get(path.getStreamName());
+				}
+				else {
+					streamUndeployQueues.putIfAbsent(path.getStreamName(),
+							new LinkedBlockingQueue<PathChildrenCacheEvent>());
+					queue = streamUndeployQueues.get(path.getStreamName());
+				}
+			}
+			if (queue != null) {
+				queue.put(event);
+			}
+		}
+
+		public PathChildrenCacheEvent nextStreamDeployEvent(String streamName) {
+			try {
+				LinkedBlockingQueue<PathChildrenCacheEvent> queue = streamDeployQueues.get(streamName);
+				return queue != null ? queue.poll(10, TimeUnit.SECONDS) : null;
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return null;
+			}
+		}
+
+		public PathChildrenCacheEvent nextStreamUndeployEvent(String streamName) {
+			try {
+				LinkedBlockingQueue<PathChildrenCacheEvent> queue = streamUndeployQueues.get(streamName);
+				return queue != null ? queue.poll(10, TimeUnit.SECONDS) : null;
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return null;
+			}
+		}
+
+		public PathChildrenCacheEvent nextJobDeployEvent(String jobName) {
+			try {
+				LinkedBlockingQueue<PathChildrenCacheEvent> queue = jobDeployQueues.get(jobName);
+				return queue != null ? queue.poll(10, TimeUnit.SECONDS) : null;
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return null;
+			}
+		}
+
+		public PathChildrenCacheEvent nextJobUndeployEvent(String jobName) {
+			try {
+				LinkedBlockingQueue<PathChildrenCacheEvent> queue = jobUndeployQueues.get(jobName);
+				return queue != null ? queue.poll(10, TimeUnit.SECONDS) : null;
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return null;
+			}
+		}
+	}
 }
