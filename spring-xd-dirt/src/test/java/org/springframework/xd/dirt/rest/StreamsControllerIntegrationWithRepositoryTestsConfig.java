@@ -19,8 +19,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.xd.dirt.module.memory.InMemoryModuleDependencyRepository;
 import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
 import org.springframework.xd.dirt.stream.StreamRepository;
-import org.springframework.xd.dirt.stream.memory.InMemoryStreamRepository;
 import org.springframework.xd.dirt.stream.zookeeper.ZooKeeperStreamDefinitionRepository;
+import org.springframework.xd.dirt.stream.zookeeper.ZooKeeperStreamRepository;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 
 /**
@@ -43,7 +43,7 @@ public class StreamsControllerIntegrationWithRepositoryTestsConfig extends Depen
 	@Override
 	@Bean
 	public StreamRepository streamRepository() {
-		return new InMemoryStreamRepository();
+		return new ZooKeeperStreamRepository(zooKeeperConnection);
 	}
 
 }
