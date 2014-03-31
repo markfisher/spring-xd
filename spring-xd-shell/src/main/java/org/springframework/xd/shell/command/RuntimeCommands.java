@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,12 @@ import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
 import org.springframework.stereotype.Component;
 import org.springframework.xd.rest.client.RuntimeOperations;
-import org.springframework.xd.rest.client.domain.RuntimeContainerInfoResource;
+import org.springframework.xd.rest.client.domain.ContainerMetadataResource;
 import org.springframework.xd.rest.client.domain.RuntimeModuleInfoResource;
 import org.springframework.xd.shell.XDShell;
 import org.springframework.xd.shell.util.Table;
 import org.springframework.xd.shell.util.TableHeader;
 import org.springframework.xd.shell.util.TableRow;
-
 
 /**
  * Commands to interact with runtime containers/modules.
@@ -55,11 +54,11 @@ public class RuntimeCommands implements CommandMarker {
 	@CliCommand(value = LIST_CONTAINERS, help = "List runtime containers")
 	public Table listContainers() {
 
-		final PagedResources<RuntimeContainerInfoResource> containers = runtimeOperations().listRuntimeContainers();
+		final PagedResources<ContainerMetadataResource> containers = runtimeOperations().listRuntimeContainers();
 		final Table table = new Table();
 		table.addHeader(1, new TableHeader("Container Id")).addHeader(2, new TableHeader("Host")).addHeader(
 				3, new TableHeader("IP Address"));
-		for (RuntimeContainerInfoResource container : containers) {
+		for (ContainerMetadataResource container : containers) {
 			final TableRow row = table.newRow();
 			row.addValue(1, container.getContainerId()).addValue(2, container.getHostName()).addValue(3,
 					container.getIpAddress());

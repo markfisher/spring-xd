@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,8 @@ package org.springframework.xd.rest.client.impl;
 
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.xd.rest.client.RuntimeOperations;
-import org.springframework.xd.rest.client.domain.RuntimeContainerInfoResource;
+import org.springframework.xd.rest.client.domain.ContainerMetadataResource;
 import org.springframework.xd.rest.client.domain.RuntimeModuleInfoResource;
-
 
 /**
  * Implementation of the runtime containers/modules related part of the API.
@@ -34,10 +33,10 @@ public class RuntimeTemplate extends AbstractTemplate implements RuntimeOperatio
 	}
 
 	@Override
-	public RuntimeContainerInfoResource.Page listRuntimeContainers() {
+	public ContainerMetadataResource.Page listRuntimeContainers() {
 		String uriTemplate = resources.get("runtime/containers").toString();
 		uriTemplate = uriTemplate + "?size=10000";
-		return restTemplate.getForObject(uriTemplate, RuntimeContainerInfoResource.Page.class);
+		return restTemplate.getForObject(uriTemplate, ContainerMetadataResource.Page.class);
 	}
 
 	@Override

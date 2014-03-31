@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,34 +22,33 @@ import org.springframework.hateoas.PagedResources;
 import org.springframework.hateoas.ResourceSupport;
 import org.springframework.util.Assert;
 
-
 /**
  * Represents runtime container info model.
  * 
  * @author Ilayaperumal Gopinathan
+ * @author Mark Fisher
  */
 @XmlRootElement
-public class RuntimeContainerInfoResource extends ResourceSupport {
+public class ContainerMetadataResource extends ResourceSupport {
 
 	private String containerId;
 
-	private String jvmName;
+	private int processId;
 
 	private String hostName;
 
 	private String ipAddress;
 
 	@SuppressWarnings("unused")
-	private RuntimeContainerInfoResource() {
+	private ContainerMetadataResource() {
 	}
 
-	public RuntimeContainerInfoResource(String containerId, String jvmName, String hostName, String ipAddress) {
+	public ContainerMetadataResource(String containerId, int processId, String hostName, String ipAddress) {
 		Assert.hasText(containerId, "Container Id can not be empty");
-		Assert.hasText(jvmName, "JVM name can not be empty");
 		Assert.hasText(hostName, "Hostname can not be empty");
 		Assert.hasText(ipAddress, "IP address can not be empty");
 		this.containerId = containerId;
-		this.jvmName = jvmName;
+		this.processId = processId;
 		this.hostName = hostName;
 		this.ipAddress = ipAddress;
 	}
@@ -58,8 +57,8 @@ public class RuntimeContainerInfoResource extends ResourceSupport {
 		return containerId;
 	}
 
-	public String getJvmName() {
-		return jvmName;
+	public int getProcessId() {
+		return processId;
 	}
 
 	public String getHostName() {
@@ -80,7 +79,7 @@ public class RuntimeContainerInfoResource extends ResourceSupport {
 	 * 
 	 * @author Eric Bottard
 	 */
-	public static class Page extends PagedResources<RuntimeContainerInfoResource> {
+	public static class Page extends PagedResources<ContainerMetadataResource> {
 
 	}
 

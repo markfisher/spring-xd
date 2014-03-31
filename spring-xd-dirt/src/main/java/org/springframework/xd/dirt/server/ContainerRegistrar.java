@@ -18,11 +18,8 @@ package org.springframework.xd.dirt.server;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -49,6 +46,7 @@ import org.springframework.validation.BindException;
 import org.springframework.xd.dirt.container.ContainerMetadata;
 import org.springframework.xd.dirt.container.ContainerStartedEvent;
 import org.springframework.xd.dirt.container.ContainerStoppedEvent;
+import org.springframework.xd.dirt.container.store.ContainerMetadataRepository;
 import org.springframework.xd.dirt.core.DeploymentsPath;
 import org.springframework.xd.dirt.core.JobsPath;
 import org.springframework.xd.dirt.core.ModuleDescriptor;
@@ -104,6 +102,11 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	private final ContainerMetadata containerMetadata;
 
 	/**
+	 * Repository where {@link ContainerMetadata} is stored.
+	 */
+	private final ContainerMetadataRepository containerMetadataRepository;
+
+	/**
 	 * The ZooKeeperConnection.
 	 */
 	private final ZooKeeperConnection zkConnection;
@@ -156,11 +159,6 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			new ConcurrentHashMap<ModuleDescriptor.Key, ModuleDescriptor>();
 
 	/**
-	 * The set of groups this container belongs to.
-	 */
-	private final Set<String> groups;
-
-	/**
 	 * The ModuleDeployer this container delegates to when deploying a Module.
 	 */
 	private final ModuleDeployer moduleDeployer;
@@ -187,15 +185,15 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * within a callback that is invoked for connected events as well as reconnected events.
 	 */
 	public ContainerRegistrar(ContainerMetadata metadata,
+			ContainerMetadataRepository containerMetadataRepository,
 			StreamDefinitionRepository streamDefinitionRepository,
 			ModuleDefinitionRepository moduleDefinitionRepository,
 			ModuleOptionsMetadataResolver moduleOptionsMetadataResolver,
 			ModuleDeployer moduleDeployer,
 			ZooKeeperConnection zkConnection) {
 		this.containerMetadata = metadata;
+		this.containerMetadataRepository = containerMetadataRepository;
 		this.zkConnection = zkConnection;
-		// todo: support groups (see the ctor for ContainerServer in xdzk)
-		this.groups = Collections.emptySet();
 		this.moduleDefinitionRepository = moduleDefinitionRepository;
 		this.moduleOptionsMetadataResolver = moduleOptionsMetadataResolver;
 		this.moduleDeployer = moduleDeployer;
@@ -273,33 +271,10 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			Paths.ensurePath(client, Paths.DEPLOYMENTS);
 			deployments = new PathChildrenCache(client, Paths.build(Paths.DEPLOYMENTS, containerMetadata.getId()), true);
 			deployments.getListenable().addListener(deploymentListener);
-
-			String jvmName = containerMetadata.getJvmName();
-			String tokens[] = jvmName.split("@");
-			Map<String, String> map = new HashMap<String, String>();
-			map.put("pid", tokens[0]);
-			map.put("host", tokens[1]);
-			map.put("ip", containerMetadata.getIpAddress());
-
-			StringBuilder builder = new StringBuilder();
-			Iterator<String> iterator = groups.iterator();
-			while (iterator.hasNext()) {
-				builder.append(iterator.next());
-				if (iterator.hasNext()) {
-					builder.append(',');
-				}
-			}
-			map.put("groups", builder.toString());
-
-			// todo: might need creatingParentsIfNeeded here if ensure path is not working
-			// (had a similar problem with tests last time we tried to move this code over from proto)
-			client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
-					Paths.build(Paths.CONTAINERS, containerMetadata.getId()),
-					mapBytesUtility.toByteArray(map));
-
+			containerMetadataRepository.save(containerMetadata);
 			deployments.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
 
-			LOG.info("Started container {} with attributes: {} ", containerMetadata.getId(), map);
+			LOG.info("Started container {} with metadata: {} ", containerMetadata);
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
