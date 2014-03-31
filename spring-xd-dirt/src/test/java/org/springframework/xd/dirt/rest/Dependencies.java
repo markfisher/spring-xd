@@ -60,10 +60,10 @@ import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
 import org.springframework.xd.dirt.stream.StreamDeployer;
 import org.springframework.xd.dirt.stream.StreamRepository;
 import org.springframework.xd.dirt.stream.XDStreamParser;
-import org.springframework.xd.dirt.stream.memory.InMemoryJobDefinitionRepository;
-import org.springframework.xd.dirt.stream.memory.InMemoryJobRepository;
-import org.springframework.xd.dirt.stream.memory.InMemoryStreamRepository;
+import org.springframework.xd.dirt.stream.zookeeper.ZooKeeperJobDefinitionRepository;
+import org.springframework.xd.dirt.stream.zookeeper.ZooKeeperJobRepository;
 import org.springframework.xd.dirt.stream.zookeeper.ZooKeeperStreamDefinitionRepository;
+import org.springframework.xd.dirt.stream.zookeeper.ZooKeeperStreamRepository;
 import org.springframework.xd.dirt.zookeeper.EmbeddedZooKeeper;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.module.options.DefaultModuleOptionsMetadataResolver;
@@ -142,7 +142,7 @@ public class Dependencies {
 
 	@Bean
 	public JobDefinitionRepository jobDefinitionRepository() {
-		return new InMemoryJobDefinitionRepository();
+		return new ZooKeeperJobDefinitionRepository(zooKeeperConnection());
 	}
 
 	@Bean
@@ -184,12 +184,12 @@ public class Dependencies {
 
 	@Bean
 	public StreamRepository streamRepository() {
-		return new InMemoryStreamRepository();
+		return new ZooKeeperStreamRepository(zooKeeperConnection());
 	}
 
 	@Bean
 	public org.springframework.xd.dirt.stream.JobRepository xdJobRepository() {
-		return new InMemoryJobRepository();
+		return new ZooKeeperJobRepository(zooKeeperConnection());
 	}
 
 	@Bean
