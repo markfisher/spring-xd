@@ -44,8 +44,6 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.util.Assert;
 import org.springframework.validation.BindException;
 import org.springframework.xd.dirt.container.ContainerMetadata;
-import org.springframework.xd.dirt.container.ContainerStartedEvent;
-import org.springframework.xd.dirt.container.ContainerStoppedEvent;
 import org.springframework.xd.dirt.container.store.ContainerMetadataRepository;
 import org.springframework.xd.dirt.core.DeploymentsPath;
 import org.springframework.xd.dirt.core.JobsPath;
@@ -249,7 +247,6 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		if (this.context.equals(event.getApplicationContext())) {
 			if (zkConnection.isConnected()) {
 				registerWithZooKeeper(zkConnection.getClient());
-				context.publishEvent(new ContainerStartedEvent(containerMetadata));
 			}
 			zkConnection.addListener(new ContainerMetadataRegisteringZooKeeperConnectionListener());
 		}
@@ -290,13 +287,11 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		@Override
 		public void onConnect(CuratorFramework client) {
 			registerWithZooKeeper(client);
-			context.publishEvent(new ContainerStartedEvent(containerMetadata));
 		}
 
 		@Override
 		public void onDisconnect(CuratorFramework client) {
 			try {
-				context.publishEvent(new ContainerStoppedEvent(containerMetadata));
 				LOG.warn(">>> disconnected container: {}", containerMetadata.getId());
 				deployments.getListenable().removeListener(deploymentListener);
 				deployments.close();
