@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,6 @@ import org.springframework.shell.core.CommandResult;
 import org.springframework.shell.core.JLineShellComponent;
 import org.springframework.util.AlternativeJdkIdGenerator;
 import org.springframework.util.IdGenerator;
-import org.springframework.xd.dirt.container.store.RuntimeContainerInfoRepository;
 import org.springframework.xd.dirt.integration.test.SingleNodeIntegrationTestSupport;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
 import org.springframework.xd.dirt.server.SingleNodeApplication;
@@ -61,7 +60,6 @@ import org.springframework.xd.test.redis.RedisTestSupport;
  * @author Mark Pollack
  * @author Kashyap Parikh
  * @author David Turanski
- * 
  */
 public abstract class AbstractShellIntegrationTest {
 
@@ -92,8 +90,6 @@ public abstract class AbstractShellIntegrationTest {
 
 	private Set<File> toBeDeleted = new HashSet<File>();
 
-	private static RuntimeContainerInfoRepository runtimeInformationRepository;
-
 	protected static StreamCommandListener streamCommandListener;
 
 	protected static JobCommandListener jobCommandListener = new JobCommandListener();
@@ -120,9 +116,6 @@ public abstract class AbstractShellIntegrationTest {
 
 			Bootstrap bootstrap = new Bootstrap(new String[] { "--port", randomConfigSupport.getAdminServerPort() });
 			shell = bootstrap.getJLineShellComponent();
-
-			runtimeInformationRepository = application.pluginContext().getBean(
-					RuntimeContainerInfoRepository.class);
 		}
 		if (!shell.isRunning()) {
 			shell.start();
@@ -132,7 +125,6 @@ public abstract class AbstractShellIntegrationTest {
 	@AfterClass
 	public static void shutdown() {
 		if (SHUTDOWN_AFTER_RUN) {
-			runtimeInformationRepository.delete(application.pluginContext().getId());
 			logger.info("Stopping XD Shell");
 			shell.stop();
 			if (application != null) {

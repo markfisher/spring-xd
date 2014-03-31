@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package org.springframework.xd.dirt.container.store;
 
+import org.springframework.xd.dirt.container.ContainerMetadata;
 import org.springframework.xd.store.DomainRepository;
 
-
 /**
- * Repository for persisting Container entities
+ * Repository for persisting {@link ContainerMetadata} entities.
  * 
  * @author Ilayaperumal Gopinathan
  */
-public interface RuntimeContainerInfoRepository extends DomainRepository<RuntimeContainerInfoEntity, String> {
+public interface ContainerMetadataRepository extends DomainRepository<ContainerMetadata, String> {
 
 }

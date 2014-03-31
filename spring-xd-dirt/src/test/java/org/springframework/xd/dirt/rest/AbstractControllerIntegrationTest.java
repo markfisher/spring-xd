@@ -36,7 +36,7 @@ import org.springframework.xd.analytics.metrics.core.CounterRepository;
 import org.springframework.xd.analytics.metrics.core.FieldValueCounterRepository;
 import org.springframework.xd.analytics.metrics.core.GaugeRepository;
 import org.springframework.xd.analytics.metrics.core.RichGaugeRepository;
-import org.springframework.xd.dirt.container.store.RuntimeContainerInfoRepository;
+import org.springframework.xd.dirt.container.store.ContainerMetadataRepository;
 import org.springframework.xd.dirt.module.store.RuntimeContainerModuleInfoRepository;
 import org.springframework.xd.dirt.module.store.RuntimeModuleInfoRepository;
 import org.springframework.xd.dirt.rest.AbstractControllerIntegrationTest.LegacyMvcConfiguration;
@@ -87,9 +87,9 @@ public class AbstractControllerIntegrationTest {
 	@Autowired
 	protected JobDefinitionRepository jobDefinitionRepository;
 
-	// Container Repository
+	// Container Metadata Repository
 	@Autowired
-	protected RuntimeContainerInfoRepository containerRepository;
+	protected ContainerMetadataRepository containerMetadataRepository;
 
 	// Runtime Repository
 	@Autowired
@@ -120,7 +120,7 @@ public class AbstractControllerIntegrationTest {
 		maybeReset(jobDeployer);
 		maybeReset(jobService);
 
-		resetOrDelete(containerRepository);
+		resetOrDelete(containerMetadataRepository);
 		resetOrDelete(modulesRepository);
 		resetOrDelete(containerModulesRepository);
 

@@ -61,7 +61,7 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 
 	private final MapBytesUtility mapBytesUtility = new MapBytesUtility();
 
-	private final StreamPathEnsuringConnectionListener connectionListener = new StreamPathEnsuringConnectionListener();
+	private final StreamsPathEnsuringConnectionListener connectionListener = new StreamsPathEnsuringConnectionListener();
 
 	@Autowired
 	public ZooKeeperStreamDefinitionRepository(ZooKeeperConnection zkConnection,
@@ -243,7 +243,7 @@ public class ZooKeeperStreamDefinitionRepository implements StreamDefinitionRepo
 	/**
 	 * A {@link ZooKeeperConnectionListener} that ensures the {@code /xd/streams} path exists.
 	 */
-	private static class StreamPathEnsuringConnectionListener implements ZooKeeperConnectionListener {
+	private static class StreamsPathEnsuringConnectionListener implements ZooKeeperConnectionListener {
 
 		@Override
 		public void onDisconnect(CuratorFramework client) {
