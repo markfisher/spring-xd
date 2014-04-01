@@ -625,7 +625,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 				CuratorFramework client = zkConnection.getClient();
 				if (client.checkExists().forPath(deploymentPath) != null) {
 					LOG.trace("Deleting path: {}", deploymentPath);
-					client.delete().forPath(deploymentPath);
+					client.delete().deletingChildrenIfNeeded().forPath(deploymentPath);
 				}
 			}
 			else {
