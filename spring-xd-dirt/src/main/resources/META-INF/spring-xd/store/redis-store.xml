@@ -37,10 +37,7 @@
 		<constructor-arg ref="moduleDependencyRepository" />
 	</bean>
 
-	<bean id="moduleDependencyRepository"
-		class="org.springframework.xd.dirt.module.redis.RedisModuleDependencyRepository">
-		<constructor-arg ref="stringRedisTemplate" />
-	</bean>
+	<bean id="moduleDependencyRepository" class="org.springframework.xd.dirt.module.store.ZooKeeperModuleDependencyRepository"/>
 
 	<bean id="moduleRegistry"
 		class="org.springframework.xd.dirt.module.DelegatingModuleRegistry">

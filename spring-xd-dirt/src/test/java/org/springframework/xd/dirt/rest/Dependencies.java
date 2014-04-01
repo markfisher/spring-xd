@@ -48,9 +48,9 @@ import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
 import org.springframework.xd.dirt.module.ModuleDependencyRepository;
 import org.springframework.xd.dirt.module.ModuleRegistry;
 import org.springframework.xd.dirt.module.memory.InMemoryModuleDefinitionRepository;
-import org.springframework.xd.dirt.module.memory.InMemoryModuleDependencyRepository;
 import org.springframework.xd.dirt.module.store.RuntimeContainerModuleInfoRepository;
 import org.springframework.xd.dirt.module.store.RuntimeModuleInfoRepository;
+import org.springframework.xd.dirt.module.store.ZooKeeperModuleDependencyRepository;
 import org.springframework.xd.dirt.plugins.job.DistributedJobLocator;
 import org.springframework.xd.dirt.plugins.job.DistributedJobService;
 import org.springframework.xd.dirt.stream.CompositeModuleDefinitionService;
@@ -169,7 +169,7 @@ public class Dependencies {
 
 	@Bean
 	public ModuleDependencyRepository moduleDependencyRepository() {
-		return new InMemoryModuleDependencyRepository();
+		return new ZooKeeperModuleDependencyRepository(zooKeeperConnection());
 	}
 
 	@Bean
