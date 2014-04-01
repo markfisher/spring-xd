@@ -11,12 +11,8 @@
 	<bean id="runtimeModuleInfoRepository" class="org.springframework.xd.dirt.module.store.InMemoryRuntimeModuleInfoRepository" />
 	<bean id="runtimeContainerModuleInfoRepository" class="org.springframework.xd.dirt.module.store.InMemoryRuntimeContainerModuleInfoRepository" />
 	<bean id="moduleDependencyRepository" class="org.springframework.xd.dirt.module.store.ZooKeeperModuleDependencyRepository"/>
+	<bean id="moduleDefinitionRepository" class="org.springframework.xd.dirt.module.store.ZooKeeperModuleDefinitionRepository"/>
 	
-	<bean id="moduleDefinitionRepository" class="org.springframework.xd.dirt.module.memory.InMemoryModuleDefinitionRepository">
-		<constructor-arg ref="moduleRegistry"/>
-		<constructor-arg ref="moduleDependencyRepository"/>
-	</bean>
-
 	<bean id="moduleRegistry" class="org.springframework.xd.dirt.module.DelegatingModuleRegistry">
 		<constructor-arg>
 			<list>

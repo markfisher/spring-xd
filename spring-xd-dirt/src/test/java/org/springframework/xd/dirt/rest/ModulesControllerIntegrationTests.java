@@ -130,7 +130,7 @@ public class ModulesControllerIntegrationTests extends AbstractControllerIntegra
 		when(moduleRegistry.findDefinition("job_4_with_resource", ModuleType.job)).thenReturn(moduleDefinition);
 
 		// clear this one so it does not have side effects on other tests
-		moduleDefinitionRepository.delete("sink:compositesink");
+		moduleDefinitionRepository.delete("compositesink", ModuleType.sink);
 	}
 
 	@Test
