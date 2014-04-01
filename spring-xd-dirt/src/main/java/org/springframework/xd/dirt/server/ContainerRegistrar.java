@@ -18,6 +18,7 @@ package org.springframework.xd.dirt.server;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,6 +43,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.validation.BindException;
 import org.springframework.xd.dirt.container.ContainerMetadata;
 import org.springframework.xd.dirt.container.store.ContainerMetadataRepository;
@@ -181,13 +183,13 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * {@link ZooKeeperConnection} is established. If that connection is already established at the time this instance
 	 * receives a {@link ContextRefreshedEvent}, the metadata will be registered then. Otherwise, registration occurs
 	 * within a callback that is invoked for connected events as well as reconnected events.
-	 *
-	 * @param metadata  metadata for the container
-	 * @param streamDefinitionRepository    repository for streams
-	 * @param moduleDefinitionRepository    repository for modules
+	 * 
+	 * @param metadata metadata for the container
+	 * @param streamDefinitionRepository repository for streams
+	 * @param moduleDefinitionRepository repository for modules
 	 * @param moduleOptionsMetadataResolver resolver for module options metadata
-	 * @param moduleDeployer                module deployer
-	 * @param zkConnection                  ZooKeeper connection
+	 * @param moduleDeployer module deployer
+	 * @param zkConnection ZooKeeper connection
 	 */
 	public ContainerRegistrar(ContainerMetadata metadata,
 			ContainerMetadataRepository containerMetadataRepository,
@@ -213,7 +215,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * 
 	 * @param moduleDescriptor descriptor for the module to be deployed
 	 */
-	private void deployModule(ModuleDescriptor moduleDescriptor) {
+	private Module deployModule(ModuleDescriptor moduleDescriptor) {
 		LOG.info("Deploying module {}", moduleDescriptor);
 		mapDeployedModules.put(moduleDescriptor.newKey(), moduleDescriptor);
 		ModuleOptions moduleOptions = this.safeModuleOptionsInterpolate(moduleDescriptor);
@@ -222,13 +224,14 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 				: createSimpleModule(moduleDescriptor, moduleOptions);
 		// todo: rather than delegate, merge ContainerRegistrar itself into and remove most of ModuleDeployer
 		this.moduleDeployer.deployAndStore(module, moduleDescriptor);
+		return module;
 	}
 
 	/**
 	 * Undeploy the requested module.
-	 *
-	 * @param streamName  name of the stream for the module
-	 * @param moduleType  module type
+	 * 
+	 * @param streamName name of the stream for the module
+	 * @param moduleType module type
 	 * @param moduleLabel module label
 	 */
 	protected void undeployModule(String streamName, String moduleType, String moduleLabel) {
@@ -338,31 +341,39 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		String streamName = deploymentsPath.getStreamName();
 		String moduleType = deploymentsPath.getModuleType();
 		String moduleLabel = deploymentsPath.getModuleLabel();
-		if (ModuleType.job.toString().equals(moduleType)) {
-			deployJob(client, streamName, moduleLabel);
-		}
-		else {
-			deployStreamModule(client, streamName, moduleType, moduleLabel);
+		Module module = (ModuleType.job.toString().equals(moduleType))
+				? deployJob(client, streamName, moduleLabel)
+				: deployStreamModule(client, streamName, moduleType, moduleLabel);
+		if (module != null) {
+			Map<String, String> map = new HashMap<String, String>();
+			CollectionUtils.mergePropertiesIntoMap(module.getProperties(), map);
+			byte[] metadata = mapBytesUtility.toByteArray(map);
+			try {
+				client.create().withMode(CreateMode.EPHEMERAL).forPath(data.getPath() + "/metadata", metadata);
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 
 	/**
 	 * Deploy the requested job.
-	 *
-	 * @param client    curator client
-	 * @param jobName   job name
-	 * @param jobLabel  job label
+	 * 
+	 * @param client curator client
+	 * @param jobName job name
+	 * @param jobLabel job label
+	 * @return Module deployed job module
 	 */
-	private void deployJob(CuratorFramework client, String jobName, String jobLabel) {
+	private Module deployJob(CuratorFramework client, String jobName, String jobLabel) {
 		LOG.info("Deploying job '{}'", jobName);
 
 		String jobPath = new JobsPath().setJobName(jobName)
 				.setModuleLabel(jobLabel)
 				.setContainer(containerMetadata.getId()).build();
 
-		Map<String, String> map;
 		try {
-			map = mapBytesUtility.toMap(client.getData().forPath(Paths.build(Paths.JOBS, jobName)));
+			Map<String, String> map = mapBytesUtility.toMap(client.getData().forPath(Paths.build(Paths.JOBS, jobName)));
 
 			// todo: do we need something like StreamFactory for jobs, or is that overkill?
 			String jobModuleName = jobLabel.substring(0, jobLabel.lastIndexOf('-'));
@@ -374,7 +385,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			ModuleDescriptor moduleDescriptor = new ModuleDescriptor(moduleDefinition, request.getGroup(), jobLabel,
 					request.getIndex(), null, 1);
 			moduleDescriptor.addParameters(request.getParameters());
-			deployModule(moduleDescriptor);
+			Module module = deployModule(moduleDescriptor);
 
 			// this indicates that the container has deployed the module
 			client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
@@ -383,6 +394,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			// set a watch on this module in the job path;
 			// if the node is deleted this indicates an undeployment
 			client.getData().usingWatcher(jobModuleWatcher).forPath(jobPath);
+			return module;
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -391,13 +403,14 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Deploy the requested module for a stream.
-	 *
-	 * @param client       curator client
-	 * @param streamName   name of the stream for the module
-	 * @param moduleType   module type
-	 * @param moduleLabel  module label
+	 * 
+	 * @param client curator client
+	 * @param streamName name of the stream for the module
+	 * @param moduleType module type
+	 * @param moduleLabel module label
+	 * @return Module deployed stream module
 	 */
-	private void deployStreamModule(CuratorFramework client, String streamName, String moduleType, String moduleLabel) {
+	private Module deployStreamModule(CuratorFramework client, String streamName, String moduleType, String moduleLabel) {
 		LOG.info("Deploying module '{}' for stream '{}'", moduleLabel, streamName);
 
 		String streamPath = new StreamsPath().setStreamName(streamName)
@@ -405,11 +418,12 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 				.setModuleLabel(moduleLabel)
 				.setContainer(containerMetadata.getId()).build();
 
+		Module module = null;
 		try {
 			Stream stream = streamFactory.createStream(streamName,
 					mapBytesUtility.toMap(client.getData().forPath(Paths.build(Paths.STREAMS, streamName))));
 
-			deployModule(stream.getModuleDescriptor(moduleLabel, moduleType));
+			module = deployModule(stream.getModuleDescriptor(moduleLabel, moduleType));
 
 			// this indicates that the container has deployed the module
 			client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
@@ -427,9 +441,9 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			LOG.info("Module for stream {} already deployed", moduleLabel, streamName);
 		}
 		catch (Exception e) {
-			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
+		return module;
 	}
 
 	/**
@@ -465,14 +479,13 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	}
 
 	/**
-	 * Create a composed module based on the provided {@link ModuleDescriptor} and
-	 * {@link ModuleOptions}.
-	 *
-	 * @param compositeDescriptor  descriptor for composed module
-	 * @param options              module options
-	 *
+	 * Create a composed module based on the provided {@link ModuleDescriptor} and {@link ModuleOptions}.
+	 * 
+	 * @param compositeDescriptor descriptor for composed module
+	 * @param options module options
+	 * 
 	 * @return new composed module instance
-	 *
+	 * 
 	 * @see ModuleDescriptor#isComposed
 	 */
 	private Module createComposedModule(ModuleDescriptor compositeDescriptor, ModuleOptions options) {
@@ -505,12 +518,11 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	}
 
 	/**
-	 * Create a module based on the provided {@link ModuleDescriptor} and
-	 * {@link ModuleOptions}.
-	 *
-	 * @param descriptor  descriptor for module
-	 * @param options     module options
-	 *
+	 * Create a module based on the provided {@link ModuleDescriptor} and {@link ModuleOptions}.
+	 * 
+	 * @param descriptor descriptor for module
+	 * @param options module options
+	 * 
 	 * @return new module instance
 	 */
 	private Module createSimpleModule(ModuleDescriptor descriptor, ModuleOptions options) {
@@ -528,9 +540,9 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	/**
 	 * Takes a request and returns an instance of {@link ModuleOptions} bound with the request parameters. Binding is
 	 * assumed to not fail, as it has already been validated on the admin side.
-	 *
+	 * 
 	 * @param descriptor module descriptor for which to bind request parameters
-	 *
+	 * 
 	 * @return module options bound with request parameters
 	 */
 	private ModuleOptions safeModuleOptionsInterpolate(ModuleDescriptor descriptor) {
@@ -575,7 +587,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 				CuratorFramework client = zkConnection.getClient();
 				if (client.checkExists().forPath(deploymentPath) != null) {
 					LOG.trace("Deleting path: {}", deploymentPath);
-					client.delete().forPath(deploymentPath);
+					client.delete().deletingChildrenIfNeeded().forPath(deploymentPath);
 				}
 			}
 			else {
