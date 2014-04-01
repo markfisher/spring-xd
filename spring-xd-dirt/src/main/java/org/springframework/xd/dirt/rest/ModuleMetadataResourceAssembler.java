@@ -17,31 +17,30 @@
 package org.springframework.xd.dirt.rest;
 
 import org.springframework.hateoas.mvc.ResourceAssemblerSupport;
-import org.springframework.xd.dirt.module.store.RuntimeModuleInfoEntity;
-import org.springframework.xd.rest.client.domain.RuntimeModuleInfoResource;
+import org.springframework.xd.dirt.module.store.ModuleMetadata;
+import org.springframework.xd.rest.client.domain.ModuleMetadataResource;
 
 
 /**
- * Knows how to assemble {@link RuntimeModuleInfoResource}s out of {@link RuntimeModuleInfoEntity}s.
+ * Knows how to assemble {@link ModuleMetadataResource}s out of {@link ModuleMetadata}s.
  * 
  * @author Ilayaperumal Gopinathan
  */
-public class RuntimeModuleInfoResourceAssembler extends
-		ResourceAssemblerSupport<RuntimeModuleInfoEntity, RuntimeModuleInfoResource> {
+public class ModuleMetadataResourceAssembler extends
+		ResourceAssemblerSupport<ModuleMetadata, ModuleMetadataResource> {
 
-	public RuntimeModuleInfoResourceAssembler() {
-		super(RuntimeModulesController.class, RuntimeModuleInfoResource.class);
+	public ModuleMetadataResourceAssembler() {
+		super(ModulesMetadataController.class, ModuleMetadataResource.class);
 	}
 
 	@Override
-	public RuntimeModuleInfoResource toResource(RuntimeModuleInfoEntity entity) {
+	public ModuleMetadataResource toResource(ModuleMetadata entity) {
 		return createResourceWithId(entity.getId(), entity);
 	}
 
 	@Override
-	protected RuntimeModuleInfoResource instantiateResource(RuntimeModuleInfoEntity entity) {
-		return new RuntimeModuleInfoResource(entity.getContainerId(), entity.getGroup(), entity.getIndex(),
-				entity.getProperties());
+	protected ModuleMetadataResource instantiateResource(ModuleMetadata entity) {
+		return new ModuleMetadataResource(entity.getId(), entity.getContainerId(), entity.getProperties());
 	}
 
 }

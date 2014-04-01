@@ -28,27 +28,21 @@ import org.springframework.hateoas.ResourceSupport;
  * @author Ilayaperumal Gopinathan
  */
 @XmlRootElement
-public class RuntimeModuleInfoResource extends ResourceSupport {
+public class ModuleMetadataResource extends ResourceSupport {
 
 	private String moduleId;
 
 	private String containerId;
 
-	private String group;
-
-	private String index;
-
 	private String properties;
 
 	@SuppressWarnings("unused")
-	private RuntimeModuleInfoResource() {
+	private ModuleMetadataResource() {
 	}
 
-	public RuntimeModuleInfoResource(String containerId, String group, String index, String properties) {
-		this.moduleId = containerId + ":" + group + ":" + index;
+	public ModuleMetadataResource(String moduleId, String containerId, String properties) {
+		this.moduleId = moduleId;
 		this.containerId = containerId;
-		this.group = group;
-		this.index = index;
 		this.properties = properties;
 	}
 
@@ -58,14 +52,6 @@ public class RuntimeModuleInfoResource extends ResourceSupport {
 
 	public String getContainerId() {
 		return containerId;
-	}
-
-	public String getGroup() {
-		return group;
-	}
-
-	public String getIndex() {
-		return index;
 	}
 
 	public String getProperties() {
@@ -82,7 +68,7 @@ public class RuntimeModuleInfoResource extends ResourceSupport {
 	 * 
 	 * @author Eric Bottard
 	 */
-	public static class Page extends PagedResources<RuntimeModuleInfoResource> {
+	public static class Page extends PagedResources<ModuleMetadataResource> {
 
 	}
 }

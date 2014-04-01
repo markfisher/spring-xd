@@ -30,7 +30,7 @@ import org.springframework.xd.rest.client.domain.JobDefinitionResource;
 import org.springframework.xd.rest.client.domain.JobExecutionInfoResource;
 import org.springframework.xd.rest.client.domain.JobInstanceInfoResource;
 import org.springframework.xd.rest.client.domain.ModuleDefinitionResource;
-import org.springframework.xd.rest.client.domain.RuntimeModuleInfoResource;
+import org.springframework.xd.rest.client.domain.ModuleMetadataResource;
 import org.springframework.xd.rest.client.domain.StreamDefinitionResource;
 import org.springframework.xd.rest.client.domain.XDRuntime;
 import org.springframework.xd.rest.client.domain.metrics.AggregateCountsResource;
@@ -61,7 +61,7 @@ public class AdminController {
 		xdRuntime.add(entityLinks.linkFor(JobDefinitionResource.class).withRel("jobs"));
 		xdRuntime.add(entityLinks.linkFor(ModuleDefinitionResource.class).withRel("modules"));
 
-		xdRuntime.add(entityLinks.linkFor(RuntimeModuleInfoResource.class).withRel("runtime/modules"));
+		xdRuntime.add(entityLinks.linkFor(ModuleMetadataResource.class).withRel("runtime/modules"));
 		xdRuntime.add(entityLinks.linkFor(ContainerMetadataResource.class).withRel("runtime/containers"));
 
 		xdRuntime.add(entityLinks.linkFor(DetailedJobInfoResource.class).withRel("batch/jobs"));

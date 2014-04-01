@@ -16,20 +16,35 @@
 
 package org.springframework.xd.dirt.module.store;
 
-import org.springframework.xd.store.AbstractInMemoryRepository;
-
-
 /**
- * InMemory extension for the runtime module info repository.
+ * Represents runtime module model info.
  * 
  * @author Ilayaperumal Gopinathan
  */
-public class InMemoryRuntimeModuleInfoRepository extends AbstractInMemoryRepository<RuntimeModuleInfoEntity, String>
-		implements RuntimeModuleInfoRepository {
+public class ModuleMetadata {
 
-	@Override
-	protected String keyFor(RuntimeModuleInfoEntity entity) {
-		return entity.getGroup() + ":" + entity.getIndex();
+	private final String id;
+
+	private final String containerId;
+
+	private final String properties;
+
+	public ModuleMetadata(String id, String containerId, String properties) {
+		this.id = id;
+		this.containerId = containerId;
+		this.properties = properties;
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public String getContainerId() {
+		return containerId;
+	}
+
+	public String getProperties() {
+		return properties;
 	}
 
 }

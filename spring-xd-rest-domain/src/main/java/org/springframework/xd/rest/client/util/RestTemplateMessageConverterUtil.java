@@ -35,7 +35,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.xd.rest.client.domain.ContainerMetadataResource;
 import org.springframework.xd.rest.client.domain.JobDefinitionResource;
 import org.springframework.xd.rest.client.domain.ModuleDefinitionResource;
-import org.springframework.xd.rest.client.domain.RuntimeModuleInfoResource;
+import org.springframework.xd.rest.client.domain.ModuleMetadataResource;
 import org.springframework.xd.rest.client.domain.StreamDefinitionResource;
 import org.springframework.xd.rest.client.domain.XDRuntime;
 import org.springframework.xd.rest.client.domain.metrics.AggregateCountsResource;
@@ -77,7 +77,7 @@ public class RestTemplateMessageConverterUtil {
 
 	private static final Class<?>[] ourClasses = { PagedResources.class, StreamDefinitionResource.class,
 		JobDefinitionResource.class, ModuleDefinitionResource.class, ContainerMetadataResource.class,
-		RuntimeModuleInfoResource.class,
+		ModuleMetadataResource.class,
 		MetricResource.class, GaugeResource.class,
 		AggregateCountsResource.class, CounterResource.class, XDRuntime.class, FieldValueCounterResource.class,
 		RichGaugeResource.class };

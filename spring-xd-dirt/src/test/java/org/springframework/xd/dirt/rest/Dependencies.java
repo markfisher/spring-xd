@@ -47,8 +47,7 @@ import org.springframework.xd.dirt.container.store.ContainerMetadataRepository;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
 import org.springframework.xd.dirt.module.ModuleDependencyRepository;
 import org.springframework.xd.dirt.module.ModuleRegistry;
-import org.springframework.xd.dirt.module.store.RuntimeContainerModuleInfoRepository;
-import org.springframework.xd.dirt.module.store.RuntimeModuleInfoRepository;
+import org.springframework.xd.dirt.module.store.ModuleMetadataRepository;
 import org.springframework.xd.dirt.module.store.ZooKeeperModuleDefinitionRepository;
 import org.springframework.xd.dirt.module.store.ZooKeeperModuleDependencyRepository;
 import org.springframework.xd.dirt.plugins.job.DistributedJobLocator;
@@ -199,13 +198,8 @@ public class Dependencies {
 	}
 
 	@Bean
-	public RuntimeModuleInfoRepository modulesRepository() {
-		return mock(RuntimeModuleInfoRepository.class);
-	}
-
-	@Bean
-	public RuntimeContainerModuleInfoRepository containerModulesRepository() {
-		return mock(RuntimeContainerModuleInfoRepository.class);
+	public ModuleMetadataRepository modulesRepository() {
+		return mock(ModuleMetadataRepository.class);
 	}
 
 	@Bean

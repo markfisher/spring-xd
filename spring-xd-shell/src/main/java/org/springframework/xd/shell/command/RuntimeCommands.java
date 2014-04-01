@@ -25,7 +25,7 @@ import org.springframework.shell.core.annotation.CliOption;
 import org.springframework.stereotype.Component;
 import org.springframework.xd.rest.client.RuntimeOperations;
 import org.springframework.xd.rest.client.domain.ContainerMetadataResource;
-import org.springframework.xd.rest.client.domain.RuntimeModuleInfoResource;
+import org.springframework.xd.rest.client.domain.ModuleMetadataResource;
 import org.springframework.xd.shell.XDShell;
 import org.springframework.xd.shell.util.Table;
 import org.springframework.xd.shell.util.TableHeader;
@@ -70,7 +70,7 @@ public class RuntimeCommands implements CommandMarker {
 	public Table listDeployedModules(
 			@CliOption(mandatory = false, key = { "", "containerId" }, help = "to filter by container id") String containerId) {
 
-		Iterable<RuntimeModuleInfoResource> runtimeModules;
+		Iterable<ModuleMetadataResource> runtimeModules;
 		if (containerId != null) {
 			runtimeModules = runtimeOperations().listRuntimeModulesByContainer(containerId);
 		}
@@ -78,12 +78,12 @@ public class RuntimeCommands implements CommandMarker {
 			runtimeModules = runtimeOperations().listRuntimeModules();
 		}
 		final Table table = new Table();
-		table.addHeader(1, new TableHeader("Container Id")).addHeader(2, new TableHeader("Group")).addHeader(
-				3, new TableHeader("Index")).addHeader(4, new TableHeader("Properties"));
-		for (RuntimeModuleInfoResource module : runtimeModules) {
+		table.addHeader(1, new TableHeader("Module")).addHeader(2, new TableHeader("Container Id")).addHeader(
+				3, new TableHeader("Properties"));
+		for (ModuleMetadataResource module : runtimeModules) {
 			final TableRow row = table.newRow();
-			row.addValue(1, module.getContainerId()).addValue(2, module.getGroup()).addValue(3,
-					module.getIndex()).addValue(4, module.getProperties());
+			row.addValue(1, module.getModuleId()).addValue(2, module.getContainerId()).addValue(3,
+					module.getProperties());
 		}
 		return table;
 	}

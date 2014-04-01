@@ -37,8 +37,7 @@ import org.springframework.xd.analytics.metrics.core.FieldValueCounterRepository
 import org.springframework.xd.analytics.metrics.core.GaugeRepository;
 import org.springframework.xd.analytics.metrics.core.RichGaugeRepository;
 import org.springframework.xd.dirt.container.store.ContainerMetadataRepository;
-import org.springframework.xd.dirt.module.store.RuntimeContainerModuleInfoRepository;
-import org.springframework.xd.dirt.module.store.RuntimeModuleInfoRepository;
+import org.springframework.xd.dirt.module.store.ModuleMetadataRepository;
 import org.springframework.xd.dirt.rest.AbstractControllerIntegrationTest.LegacyMvcConfiguration;
 import org.springframework.xd.dirt.stream.JobDefinitionRepository;
 import org.springframework.xd.dirt.stream.JobDeployer;
@@ -91,12 +90,9 @@ public class AbstractControllerIntegrationTest {
 	@Autowired
 	protected ContainerMetadataRepository containerMetadataRepository;
 
-	// Runtime Repository
+	// Module Metadata Repository
 	@Autowired
-	protected RuntimeModuleInfoRepository modulesRepository;
-
-	@Autowired
-	protected RuntimeContainerModuleInfoRepository containerModulesRepository;
+	protected ModuleMetadataRepository moduleMetadataRepository;
 
 	// Analytics repositories
 	@Autowired
@@ -121,8 +117,7 @@ public class AbstractControllerIntegrationTest {
 		maybeReset(jobService);
 
 		resetOrDelete(containerMetadataRepository);
-		resetOrDelete(modulesRepository);
-		resetOrDelete(containerModulesRepository);
+		resetOrDelete(moduleMetadataRepository);
 
 		resetOrDelete(streamDefinitionRepository);
 		resetOrDelete(jobDefinitionRepository);

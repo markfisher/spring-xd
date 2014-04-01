@@ -16,24 +16,17 @@
 
 package org.springframework.xd.dirt.module.store;
 
-import org.springframework.data.redis.core.RedisOperations;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.xd.store.DomainRepository;
 
 /**
- * Redis specific implementation for runtime modules info repository.
+ * Repository for persisting {@link ModuleMetadata}
  * 
  * @author Ilayaperumal Gopinathan
  */
-public class RedisRuntimeModuleInfoRepository extends AbstractRedisRuntimeModuleInfoRepository implements
-		RuntimeModuleInfoRepository {
+public interface ModuleMetadataRepository extends DomainRepository<ModuleMetadata, String> {
 
-	public RedisRuntimeModuleInfoRepository(String repoPrefix, RedisOperations<String, String> redisOperations) {
-		super(repoPrefix, redisOperations);
-	}
-
-	@Override
-	protected String keyForEntity(RuntimeModuleInfoEntity entity) {
-		return entity.getGroup();
-	}
+	Page<ModuleMetadata> findAllByContainerId(Pageable page, String containerId);
 
 }

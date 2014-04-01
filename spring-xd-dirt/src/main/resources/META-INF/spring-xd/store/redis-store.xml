@@ -17,17 +17,7 @@
 
 	<bean id="containerMetadataRepository" class="org.springframework.xd.dirt.container.store.ZooKeeperContainerMetadataRepository"/>
 
-	<bean id="runtimeModuleInfoRepository"
-		class="org.springframework.xd.dirt.module.store.RedisRuntimeModuleInfoRepository">
-		<constructor-arg name="repoPrefix" value="modules" />
-		<constructor-arg ref="stringRedisTemplate" />
-	</bean>
-
-	<bean id="runtimeContainerModuleInfoRepository"
-		class="org.springframework.xd.dirt.module.store.RedisRuntimeContainerModuleInfoRepository">
-		<constructor-arg name="repoPrefix" value="modules-container" />
-		<constructor-arg ref="stringRedisTemplate" />
-	</bean>
+	<bean id="moduleMetadataRepository" class="org.springframework.xd.dirt.module.store.ZooKeeperModuleMetadataRepository"/>
 
 	<bean id="moduleDefinitionRepository" class="org.springframework.xd.dirt.module.store.ZooKeeperModuleDefinitionRepository"/>
 
