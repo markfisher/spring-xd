@@ -111,9 +111,15 @@ public class ZooKeeperModuleDefinitionRepository implements ModuleDefinitionRepo
 		try {
 			List<String> children = zooKeeperConnection.getClient().getChildren().forPath(path);
 			for (String child : children) {
-				ModuleDefinition composed = this.findByNameAndType(child, type);
-				if (composed != null) {
-					results.add(composed);
+				byte[] data = zooKeeperConnection.getClient().getData().forPath(
+						Paths.build(MODULES_NODE, type.toString(), child));
+				// Check for data (only composed modules have definitions)
+				if (data != null && data.length > 0) {
+
+					ModuleDefinition composed = this.findByNameAndType(child, type);
+					if (composed != null) {
+						results.add(composed);
+					}
 				}
 			}
 		}
