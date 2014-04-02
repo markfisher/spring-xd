@@ -19,8 +19,6 @@ package org.springframework.xd.dirt.server.options;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.validation.constraints.NotNull;
-
 import org.kohsuke.args4j.Option;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -28,7 +26,7 @@ import org.springframework.xd.dirt.server.options.ResourcePatternScanningOptionH
 
 /**
  * Holds configuration options that are valid for the Container node, when using distributed mode.
- * 
+ *
  * @author Eric Bottard
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
