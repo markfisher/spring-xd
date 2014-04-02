@@ -93,7 +93,7 @@ public class StreamTestSupport {
 	}
 
 	protected static Map<Integer, Module> getStreamModules(String streamName) {
-		Map<String, Map<Integer, Module>> deployedModules = integrationTestSupport.deployedModules();
+		Map<String, Map<Integer, Module>> deployedModules = integrationTestSupport.getDeployedModules();
 		Assert.notNull(deployedModules.get(streamName), "Stream '" + streamName
 				+ "' apparently is not deployed. Deployed modules: " + deployedModules);
 		return deployedModules.get(streamName);

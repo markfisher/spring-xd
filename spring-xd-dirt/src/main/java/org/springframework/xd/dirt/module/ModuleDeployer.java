@@ -32,7 +32,6 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.OrderComparator;
 import org.springframework.util.Assert;
 import org.springframework.xd.dirt.core.ModuleDescriptor;
@@ -61,8 +60,6 @@ public class ModuleDeployer implements ApplicationContextAware, BeanClassLoaderA
 	private volatile ApplicationContext context;
 
 	private volatile ApplicationContext globalContext;
-
-	private volatile ApplicationEventPublisher eventPublisher;
 
 	private final ConcurrentMap<String, Map<Integer, Module>> deployedModules = new ConcurrentHashMap<String, Map<Integer, Module>>();
 
