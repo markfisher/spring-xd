@@ -17,11 +17,19 @@
 package org.springframework.xd.shell;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
@@ -44,7 +52,7 @@ import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 /**
  * A {@link PathChildrenCacheListener} that enables waiting for a stream to be created, deployed, undeployed or
  * destroyed.
- * 
+ *
  * @author David Turanski
  * @author Mark Fisher
  */
@@ -54,7 +62,8 @@ public class StreamCommandListener implements PathChildrenCacheListener {
 
 	private static int TIMEOUT = 5000;
 
-	private Map<String, Map<String, String>> streamProperties = new HashMap<String, Map<String, String>>();
+	private ConcurrentMap<String, SettableFuture<Map<String, String>>> streamProperties =
+			new ConcurrentHashMap<String, SettableFuture<Map<String, String>>>();
 
 	private volatile CuratorFramework client;
 
@@ -75,10 +84,25 @@ public class StreamCommandListener implements PathChildrenCacheListener {
 		StreamsPath path = new StreamsPath(event.getData().getPath());
 		log.info("event: {} stream: {}", path.getStreamName(), event.getType());
 		if (event.getType().equals(Type.CHILD_ADDED)) {
-			streamProperties.put(path.getStreamName(), mapBytesUtility.toMap(event.getData().getData()));
+			streamProperties.putIfAbsent(path.getStreamName(), new SettableFuture<Map<String, String>>());
+			streamProperties.get(path.getStreamName()).set(mapBytesUtility.toMap(event.getData().getData()));
 		}
 		else if (event.getType().equals(Type.CHILD_REMOVED)) {
 			streamProperties.remove(path.getStreamName());
+		}
+	}
+
+	private Map<String, String> getStreamProperties(String streamName, long timeout) {
+		this.streamProperties.putIfAbsent(streamName, new SettableFuture<Map<String, String>>());
+		try {
+			return this.streamProperties.get(streamName).get(timeout, TimeUnit.MILLISECONDS);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return null;
+		}
+		catch (Exception e) {
+			throw new IllegalStateException("failed while waiting for stream properties", e);
 		}
 	}
 
@@ -168,7 +192,7 @@ public class StreamCommandListener implements PathChildrenCacheListener {
 	private List<String> getModuleDeploymentPaths(String streamName) {
 		List<String> moduleDeploymentPaths = new ArrayList<String>();
 		try {
-			Stream stream = streamFactory.createStream(streamName, streamProperties.get(streamName));
+			Stream stream = streamFactory.createStream(streamName, getStreamProperties(streamName, 5000));
 			for (Iterator<ModuleDescriptor> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
 				ModuleDescriptor descriptor = iterator.next();
 				moduleDeploymentPaths.add(new StreamsPath()
@@ -183,6 +207,56 @@ public class StreamCommandListener implements PathChildrenCacheListener {
 					String.format("Failed to determine module deployment paths for stream %s", streamName));
 		}
 		return moduleDeploymentPaths;
+	}
+
+	private static class SettableFuture<V> implements Future<V> {
+
+		private final AtomicReference<V> result = new AtomicReference<V>();
+
+		private final CountDownLatch latch = new CountDownLatch(1);
+
+		private final AtomicBoolean cancelled = new AtomicBoolean();
+
+		@Override
+		public boolean cancel(boolean mayInterruptIfRunning) {
+			return cancelled.compareAndSet(false, true);
+		}
+
+		@Override
+		public boolean isCancelled() {
+			return cancelled.get();
+		}
+
+		@Override
+		public boolean isDone() {
+			return cancelled.get() || (result.get() != null);
+		}
+
+		public void set(V value) {
+			result.set(value);
+			latch.countDown();
+		}
+
+		@Override
+		public V get() throws InterruptedException, ExecutionException {
+			if (cancelled.get()) {
+				return null;
+			}
+			latch.await();
+			return result.get();
+		}
+
+		@Override
+		public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
+				TimeoutException {
+			if (cancelled.get()) {
+				return null;
+			}
+			if (!latch.await(timeout, unit)) {
+				throw new TimeoutException();
+			}
+			return result.get();
+		}
 	}
 
 }
