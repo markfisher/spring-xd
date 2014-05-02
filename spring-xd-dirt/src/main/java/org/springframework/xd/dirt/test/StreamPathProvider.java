@@ -25,10 +25,10 @@ import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.xd.dirt.core.ModuleDescriptor;
 import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.core.StreamDeploymentsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
+import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
 import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
 import org.springframework.xd.dirt.stream.StreamFactory;
 import org.springframework.xd.dirt.util.MapBytesUtility;
@@ -37,9 +37,8 @@ import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
- * Provides path information for stream definitions, deployments, and
- * stream module deployments.
- *
+ * Provides path information for stream definitions, deployments, and stream module deployments.
+ * 
  * @author David Turanski
  * @author Mark Fisher
  * @author Patrick Peralta
@@ -68,11 +67,11 @@ public class StreamPathProvider implements DeploymentPathProvider {
 
 	/**
 	 * Construct a StreamPathProvider.
-	 *
-	 * @param zkConnection                   ZooKeeper connection
-	 * @param streamDefinitionRepository     repository for stream definitions
-	 * @param moduleDefinitionRepository     repository for module definitions
-	 * @param moduleOptionsMetadataResolver  resolver for module options metadata
+	 * 
+	 * @param zkConnection ZooKeeper connection
+	 * @param streamDefinitionRepository repository for stream definitions
+	 * @param moduleDefinitionRepository repository for module definitions
+	 * @param moduleOptionsMetadataResolver resolver for module options metadata
 	 */
 	public StreamPathProvider(ZooKeeperConnection zkConnection,
 			StreamDefinitionRepository streamDefinitionRepository,
@@ -107,12 +106,12 @@ public class StreamPathProvider implements DeploymentPathProvider {
 		List<String> moduleDeploymentPaths = new ArrayList<String>();
 		try {
 			Stream stream = streamFactory.createStream(streamName, getStreamProperties(streamName));
-			for (Iterator<ModuleDescriptor> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
-				ModuleDescriptor descriptor = iterator.next();
+			for (Iterator<ModuleDeploymentRequest> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
+				ModuleDeploymentRequest descriptor = iterator.next();
 				moduleDeploymentPaths.add(new StreamDeploymentsPath()
 						.setStreamName(stream.getName())
 						.setModuleType(descriptor.getModuleDefinition().getType().toString())
-						.setModuleLabel(descriptor.getLabel())
+						.setModuleLabel(descriptor.getModuleLabel())
 						.build());
 			}
 		}
@@ -134,7 +133,7 @@ public class StreamPathProvider implements DeploymentPathProvider {
 
 	/**
 	 * Return the data for a stream from ZooKeeper.
-	 *
+	 * 
 	 * @param streamName stream name
 	 * @return properties for a stream
 	 */

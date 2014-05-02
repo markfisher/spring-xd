@@ -55,6 +55,7 @@ import org.springframework.xd.dirt.core.JobDeploymentsPath;
 import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
 import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
 import org.springframework.xd.dirt.core.ModuleDescriptor;
+import org.springframework.xd.dirt.core.ModuleDescriptor.Key;
 import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.core.StreamDeploymentsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
@@ -87,7 +88,7 @@ import org.springframework.xd.module.support.ParentLastURLClassLoader;
  * registrar is closed, that ephemeral node will be eagerly deleted. Since the {@link ZooKeeperConnection} typically has
  * its lifecycle managed by Spring, that would be the normal behavior when the owning {@link ApplicationContext} is
  * itself closed.
- *
+ * 
  * @author Mark Fisher
  * @author David Turanski
  */
@@ -159,8 +160,8 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	/**
 	 * Map of deployed modules.
 	 */
-	private final Map<ModuleDescriptor.Key, ModuleDescriptor> mapDeployedModules =
-			new ConcurrentHashMap<ModuleDescriptor.Key, ModuleDescriptor>();
+	private final Map<ModuleDescriptorKey, ModuleDeploymentRequest> mapDeployedModules =
+			new ConcurrentHashMap<ModuleDescriptorKey, ModuleDeploymentRequest>();
 
 	/**
 	 * The ModuleDeployer this container delegates to when deploying a Module.
@@ -187,7 +188,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * {@link ZooKeeperConnection} is established. If that connection is already established at the time this instance
 	 * receives a {@link ContextRefreshedEvent}, the attributes will be registered then. Otherwise, registration occurs
 	 * within a callback that is invoked for connected events as well as reconnected events.
-	 *
+	 * 
 	 * @param containerAttributes runtime and configured attributes for the container
 	 * @param streamDefinitionRepository repository for streams
 	 * @param moduleDefinitionRepository repository for modules
@@ -216,12 +217,15 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Deploy the requested module.
-	 *
+	 * 
 	 * @param moduleDescriptor descriptor for the module to be deployed
 	 */
-	private Module deployModule(ModuleDeploymentRequest moduleDescriptor, ModuleDeploymentProperties deploymentProperties) {
+	private Module deployModule(ModuleDeploymentRequest moduleDescriptor,
+			ModuleDeploymentProperties deploymentProperties) {
 		logger.info("Deploying module {}", moduleDescriptor);
-		mapDeployedModules.put(moduleDescriptor.newKey(), moduleDescriptor);
+		ModuleDescriptorKey key = new ModuleDescriptorKey(moduleDescriptor.getGroup(), moduleDescriptor.getType(),
+				moduleDescriptor.getModuleLabel());
+		mapDeployedModules.put(key, moduleDescriptor);
 		ModuleOptions moduleOptions = this.safeModuleOptionsInterpolate(moduleDescriptor);
 		Module module = (moduleDescriptor.isComposed())
 				? createComposedModule(moduleDescriptor, moduleOptions, deploymentProperties)
@@ -233,14 +237,14 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Undeploy the requested module.
-	 *
+	 * 
 	 * @param streamName name of the stream for the module
 	 * @param moduleType module type
 	 * @param moduleLabel module label
 	 */
 	protected void undeployModule(String streamName, String moduleType, String moduleLabel) {
-		ModuleDescriptor.Key key = new ModuleDescriptor.Key(streamName, ModuleType.valueOf(moduleType), moduleLabel);
-		ModuleDescriptor descriptor = mapDeployedModules.get(key);
+		ModuleDescriptorKey key = new ModuleDescriptorKey(streamName, ModuleType.valueOf(moduleType), moduleLabel);
+		ModuleDeploymentRequest descriptor = mapDeployedModules.get(key);
 		if (descriptor == null) {
 			// This is logged at trace level because every module undeployment
 			// will cause this to be logged. This is because there is a listener
@@ -334,8 +338,8 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 				deployments.getListenable().removeListener(deploymentListener);
 				deployments.close();
 
-				for (Iterator<ModuleDescriptor.Key> iterator = mapDeployedModules.keySet().iterator(); iterator.hasNext();) {
-					ModuleDescriptor.Key key = iterator.next();
+				for (Iterator<ModuleDescriptorKey> iterator = mapDeployedModules.keySet().iterator(); iterator.hasNext();) {
+					ModuleDescriptorKey key = iterator.next();
 					undeployModule(key.getStream(), key.getType().name(), key.getLabel());
 					iterator.remove();
 				}
@@ -348,7 +352,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Event handler for new module deployments.
-	 *
+	 * 
 	 * @param client curator client
 	 * @param data module data
 	 */
@@ -375,7 +379,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Deploy the requested job.
-	 *
+	 * 
 	 * @param client curator client
 	 * @param jobName job name
 	 * @param jobLabel job label
@@ -397,12 +401,9 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 					ModuleType.job);
 			List<ModuleDeploymentRequest> requests = this.parser.parse(jobName, map.get("definition"),
 					ParsingContext.job);
-			ModuleDeploymentRequest request = requests.get(0);
+			ModuleDeploymentRequest moduleDescriptor = requests.get(0);
 			// todo: support deployment properties for job modules
-			ModuleDescriptor moduleDescriptor = new ModuleDescriptor(
-					moduleDefinition, request.getGroup(), jobLabel, request.getIndex(), null);
-			moduleDescriptor.addParameters(request.getParameters());
-			Module module = deployModule(moduleDescriptor);
+			Module module = deployModule(moduleDescriptor, new ModuleDeploymentProperties());
 
 			// this indicates that the container has deployed the module
 			client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
@@ -420,7 +421,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Deploy the requested module for a stream.
-	 *
+	 * 
 	 * @param client curator client
 	 * @param streamName name of the stream for the module
 	 * @param moduleType module type
@@ -445,7 +446,8 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			for (String key : stream.getDeploymentProperties().keySet()) {
 				String prefix = String.format("module.%s.", descriptor.getModuleName());
 				if (key.startsWith(prefix)) {
-					moduleDeploymentProperties.put(key.substring(prefix.length()), stream.getDeploymentProperties().get(key));
+					moduleDeploymentProperties.put(key.substring(prefix.length()),
+							stream.getDeploymentProperties().get(key));
 				}
 			}
 
@@ -474,7 +476,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Event handler for deployment removals.
-	 *
+	 * 
 	 * @param client curator client
 	 * @param data module data
 	 */
@@ -506,12 +508,12 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Create a composed module based on the provided {@link ModuleDescriptor} and {@link ModuleOptions}.
-	 *
+	 * 
 	 * @param compositeDescriptor descriptor for composed module
 	 * @param options module options
-	 *
+	 * 
 	 * @return new composed module instance
-	 *
+	 * 
 	 * @see ModuleDescriptor#isComposed
 	 */
 	private Module createComposedModule(ModuleDeploymentRequest compositeDescriptor,
@@ -527,13 +529,16 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		List<Module> childrenModules = new ArrayList<Module>(children.size());
 		for (ModuleDeploymentRequest childRequest : children) {
 			ModuleOptions narrowedOptions = new PrefixNarrowingModuleOptions(options, childRequest.getModuleName());
-			ModuleDefinition childDefinition = this.moduleDefinitionRepository.findByNameAndType(
-					childRequest.getModuleName(), childRequest.getType());
-			String label = ""; // todo: this should be the valid label for each module
-			ModuleDescriptor childDescriptor = new ModuleDescriptor(childDefinition,
-					childRequest.getGroup(), label, childRequest.getIndex(), deploymentProperties);
+			// todo: this below is hopefully not needed? (if parser includes in the child request already)
+			// if not, delete
+			// ModuleDefinition childDefinition = this.moduleDefinitionRepository.findByNameAndType(
+			// childRequest.getModuleName(), childRequest.getType());
+			// String label = ""; // todo: this should be the valid label for each module
+			// ModuleDescriptor childDescriptor = new ModuleDescriptor(childDefinition,
+			// childRequest.getGroup(), label, childRequest.getIndex(), deploymentProperties);
 			// todo: hacky, but due to parser results being reversed, we add each at index 0
-			childrenModules.add(0, createSimpleModule(childDescriptor, narrowedOptions));
+			// todo: is it right to pass the composite deploymentProperties here?
+			childrenModules.add(0, createSimpleModule(childRequest, narrowedOptions, deploymentProperties));
 		}
 		DeploymentMetadata metadata = new DeploymentMetadata(streamName, index, sourceChannelName, sinkChannelName);
 		return new CompositeModule(compositeDescriptor.getModuleName(), compositeDescriptor.getType(),
@@ -542,10 +547,10 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Create a module based on the provided {@link ModuleDescriptor} and {@link ModuleOptions}.
-	 *
+	 * 
 	 * @param descriptor descriptor for module
 	 * @param options module options
-	 *
+	 * 
 	 * @return new module instance
 	 */
 	private Module createSimpleModule(ModuleDeploymentRequest descriptor, ModuleOptions options,
@@ -564,9 +569,9 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	/**
 	 * Takes a request and returns an instance of {@link ModuleOptions} bound with the request parameters. Binding is
 	 * assumed to not fail, as it has already been validated on the admin side.
-	 *
+	 * 
 	 * @param descriptor module descriptor for which to bind request parameters
-	 *
+	 * 
 	 * @return module options bound with request parameters
 	 */
 	private ModuleOptions safeModuleOptionsInterpolate(ModuleDeploymentRequest descriptor) {
@@ -580,6 +585,125 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			// Can't happen as parser should have already validated options
 			throw new IllegalStateException(e);
 		}
+	}
+
+	/**
+	 * Key to be used in Map of ModuleDescriptors.
+	 */
+	// todo: should this move into ModuleDescriptor as static Key class?
+	class ModuleDescriptorKey implements Comparable<ModuleDescriptorKey> {
+
+		/**
+		 * Stream name.
+		 */
+		private final String stream;
+
+		/**
+		 * Module type.
+		 */
+		private final ModuleType type;
+
+		/**
+		 * Module label.
+		 */
+		private final String label;
+
+		/**
+		 * Construct a key.
+		 * 
+		 * @param stream stream name
+		 * @param type module type
+		 * @param label module label
+		 */
+		public ModuleDescriptorKey(String stream, ModuleType type, String label) {
+			Assert.notNull(stream, "Stream is required");
+			Assert.notNull(type, "Type is required");
+			Assert.hasText(label, "Label is required");
+			this.stream = stream;
+			this.type = type;
+			this.label = label;
+		}
+
+		/**
+		 * Return the name of the stream.
+		 * 
+		 * @return stream name
+		 */
+		public String getStream() {
+			return stream;
+		}
+
+		/**
+		 * Return the module type.
+		 * 
+		 * @return module type
+		 */
+		public ModuleType getType() {
+			return type;
+		}
+
+		/**
+		 * Return the module label.
+		 * 
+		 * @return module label
+		 */
+		public String getLabel() {
+			return label;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public int compareTo(ModuleDescriptorKey other) {
+			int c = type.compareTo(other.getType());
+			if (c == 0) {
+				c = label.compareTo(other.getLabel());
+			}
+			return c;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+
+			if (o instanceof Key) {
+				Key other = (Key) o;
+				return stream.equals(other.getStream())
+						&& type.equals(other.getType()) && label.equals(other.getLabel());
+			}
+
+			return false;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public int hashCode() {
+			int result = stream.hashCode();
+			result = 31 * result + type.hashCode();
+			result = 31 * result + label.hashCode();
+			return result;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public String toString() {
+			return "Key{" +
+					"stream='" + stream + '\'' +
+					", type=" + type +
+					", label='" + label + '\'' +
+					'}';
+		}
+
 	}
 
 	/**

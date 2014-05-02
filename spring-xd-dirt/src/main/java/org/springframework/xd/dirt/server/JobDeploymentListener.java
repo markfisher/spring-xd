@@ -33,6 +33,7 @@ import org.springframework.xd.dirt.cluster.ContainerMatcher;
 import org.springframework.xd.dirt.cluster.ContainerRepository;
 import org.springframework.xd.dirt.cluster.DefaultContainerMatcher;
 import org.springframework.xd.dirt.core.JobDeploymentsPath;
+import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
 import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
 import org.springframework.xd.dirt.core.ModuleDescriptor;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
@@ -42,13 +43,12 @@ import org.springframework.xd.dirt.stream.ParsingContext;
 import org.springframework.xd.dirt.stream.XDStreamParser;
 import org.springframework.xd.dirt.util.MapBytesUtility;
 import org.springframework.xd.dirt.zookeeper.Paths;
-import org.springframework.xd.module.ModuleDefinition;
 import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
  * Listener implementation that handles job deployment requests.
- *
+ * 
  * @author Patrick Peralta
  * @author Mark Fisher
  */
@@ -87,7 +87,7 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Construct a JobDeploymentListener.
-	 *
+	 * 
 	 * @param containerRepository repository to obtain container data
 	 * @param moduleDefinitionRepository repository to obtain module data
 	 * @param moduleOptionsMetadataResolver resolver for module options metadata
@@ -136,9 +136,9 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Handle the creation of a new job deployment.
-	 *
+	 * 
 	 * @param client curator client
-	 * @param data   job deployment request data
+	 * @param data job deployment request data
 	 */
 	private void onChildAdded(CuratorFramework client, ChildData data) throws Exception {
 		String jobName = Paths.stripPath(data.getPath());
@@ -152,9 +152,9 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Handle the deletion of a job deployment.
-	 *
+	 * 
 	 * @param client curator client
-	 * @param data   job deployment request data
+	 * @param data job deployment request data
 	 */
 	private void onChildRemoved(CuratorFramework client, ChildData data) throws Exception {
 		String jobName = Paths.stripPath(data.getPath());
@@ -173,9 +173,9 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Issue deployment requests for the job.
-	 *
-	 * @param client         curator client
-	 * @param jobDefinition  job to be deployed
+	 * 
+	 * @param client curator client
+	 * @param jobDefinition job to be deployed
 	 */
 	private void deployJob(CuratorFramework client, JobDefinition jobDefinition) throws Exception {
 		String jobName = jobDefinition.getName();
@@ -183,7 +183,9 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 		// create a ModuleDescriptor for the job using the static helper method;
 		// eventually ModuleDescriptor will be part of the Job object model
 		Iterator<Container> containerIterator = containerMatcher.match(
-				createJobModuleDescriptor(jobName), containerRepository).iterator();
+				createJobModuleDescriptor(jobName),
+				new ModuleDeploymentProperties(), // todo: jobs do not yet use deployment properties
+				containerRepository).iterator();
 		if (containerIterator.hasNext()) {
 			Container container = containerIterator.next();
 			String containerName = container.getName();
@@ -243,10 +245,10 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Issue undeployment requests for the job.
-	 *
-	 * @param client         curator client
-	 * @param jobDefinition  job to be undeployed
-	 *
+	 * 
+	 * @param client curator client
+	 * @param jobDefinition job to be undeployed
+	 * 
 	 * @throws Exception
 	 */
 	private void undeployJob(CuratorFramework client, JobDefinition jobDefinition) throws Exception {
@@ -264,18 +266,24 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 	}
 
 	/**
-	 * Create an instance of {@link ModuleDescriptor} for a given job name.
-	 * This helper method is intended for use in {@link ContainerMatcher#match(ModuleDescriptor, ContainerRepository)}
-	 * when deploying jobs. This is intended to be temporary; future revisions of Jobs will include
-	 * ModuleDescriptors.
-	 *
+	 * Create an instance of {@link ModuleDescriptor} for a given job name. This helper method is intended for use in
+	 * {@link ContainerMatcher#match(ModuleDescriptor, ContainerRepository)} when deploying jobs. This is intended to be
+	 * temporary; future revisions of Jobs will include ModuleDescriptors.
+	 * 
 	 * @param jobName job name
-	 *
+	 * 
 	 * @return a ModuleDescriptor for the given job
 	 */
-	public static ModuleDescriptor createJobModuleDescriptor(String jobName) {
-		return new ModuleDescriptor(new ModuleDefinition(jobName, ModuleType.job),
-				jobName, jobName, 0, null);
+	public static ModuleDeploymentRequest createJobModuleDescriptor(String jobName) {
+		return new ModuleDeploymentRequest.Builder()
+				.setGroup(jobName)
+				.setType(ModuleType.job)
+				.setModuleName(jobName)
+				.setModuleLabel(jobName)
+				.setIndex(0)
+				.build();
+		// return new ModuleDescriptor(new ModuleDefinition(jobName, ModuleType.job),
+		// jobName, jobName, 0, null);
 	}
 
 }

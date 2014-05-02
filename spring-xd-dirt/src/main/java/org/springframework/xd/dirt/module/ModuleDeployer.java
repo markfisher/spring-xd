@@ -34,22 +34,13 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.OrderComparator;
 import org.springframework.util.Assert;
-import org.springframework.xd.dirt.core.ModuleDescriptor;
-import org.springframework.xd.module.DeploymentMetadata;
-import org.springframework.xd.module.ModuleDefinition;
-import org.springframework.xd.module.ModuleType;
-import org.springframework.xd.module.core.CompositeModule;
 import org.springframework.xd.module.core.Module;
 import org.springframework.xd.module.core.Plugin;
-import org.springframework.xd.module.core.SimpleModule;
-import org.springframework.xd.module.options.ModuleOptions;
-import org.springframework.xd.module.options.PrefixNarrowingModuleOptions;
-import org.springframework.xd.module.support.ParentLastURLClassLoader;
 
 /**
  * Listens for deployment request messages and instantiates {@link Module}s accordingly, applying {@link Plugin} logic
  * to them.
- *
+ * 
  * @author Mark Fisher
  * @author Gary Russell
  * @author Ilayaperumal Gopinathan
@@ -111,13 +102,13 @@ public class ModuleDeployer implements ApplicationContextAware, BeanClassLoaderA
 	// but notice the use of 'group' which is abstract so it can also support jobs (not just streams)
 	// that terminology needs to change since group will be used in criteria expressions. Most likely we
 	// need to be more explicit about jobs vs. streams rather than trying to genericize into one concept.
-	public void deployAndStore(Module module, ModuleDescriptor descriptor) {
-		this.deployAndStore(module, descriptor.getStreamName(), descriptor.getIndex());
+	public void deployAndStore(Module module, ModuleDeploymentRequest descriptor) {
+		this.deployAndStore(module, descriptor.getGroup(), descriptor.getIndex());
 	}
 
 	// todo: same general idea as deployAndStore above
-	public void undeploy(ModuleDescriptor moduleDescriptor) {
-		this.handleUndeploy(moduleDescriptor.getStreamName(), moduleDescriptor.getIndex());
+	public void undeploy(ModuleDeploymentRequest moduleDescriptor) {
+		this.handleUndeploy(moduleDescriptor.getGroup(), moduleDescriptor.getIndex());
 	}
 
 	private void deployAndStore(Module module, String group, int index) {
@@ -173,7 +164,7 @@ public class ModuleDeployer implements ApplicationContextAware, BeanClassLoaderA
 
 	/**
 	 * Get the list of supported plugins for the given module.
-	 *
+	 * 
 	 * @param module
 	 * @return list supported list of plugins
 	 */
