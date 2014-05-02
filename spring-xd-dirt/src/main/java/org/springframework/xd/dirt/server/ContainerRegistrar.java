@@ -58,7 +58,7 @@ import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.core.StreamDeploymentsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
 import org.springframework.xd.dirt.module.ModuleDeployer;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 import org.springframework.xd.dirt.stream.ParsingContext;
 import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
 import org.springframework.xd.dirt.stream.StreamFactory;
@@ -158,8 +158,8 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	/**
 	 * Map of deployed modules.
 	 */
-	private final Map<ModuleDescriptorKey, ModuleDeploymentRequest> mapDeployedModules =
-			new ConcurrentHashMap<ModuleDescriptorKey, ModuleDeploymentRequest>();
+	private final Map<ModuleDescriptorKey, ModuleDescriptor> mapDeployedModules =
+			new ConcurrentHashMap<ModuleDescriptorKey, ModuleDescriptor>();
 
 	/**
 	 * The ModuleDeployer this container delegates to when deploying a Module.
@@ -218,7 +218,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * 
 	 * @param moduleDescriptor descriptor for the module to be deployed
 	 */
-	private Module deployModule(ModuleDeploymentRequest moduleDescriptor,
+	private Module deployModule(ModuleDescriptor moduleDescriptor,
 			ModuleDeploymentProperties deploymentProperties) {
 		logger.info("Deploying module {}", moduleDescriptor);
 		ModuleDescriptorKey key = new ModuleDescriptorKey(moduleDescriptor.getGroup(), moduleDescriptor.getType(),
@@ -242,7 +242,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 */
 	protected void undeployModule(String streamName, String moduleType, String moduleLabel) {
 		ModuleDescriptorKey key = new ModuleDescriptorKey(streamName, ModuleType.valueOf(moduleType), moduleLabel);
-		ModuleDeploymentRequest descriptor = mapDeployedModules.get(key);
+		ModuleDescriptor descriptor = mapDeployedModules.get(key);
 		if (descriptor == null) {
 			// This is logged at trace level because every module undeployment
 			// will cause this to be logged. This is because there is a listener
@@ -397,9 +397,9 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			String jobModuleName = jobLabel.substring(0, jobLabel.lastIndexOf('-'));
 			ModuleDefinition moduleDefinition = this.moduleDefinitionRepository.findByNameAndType(jobModuleName,
 					ModuleType.job);
-			List<ModuleDeploymentRequest> requests = this.parser.parse(jobName, map.get("definition"),
+			List<ModuleDescriptor> requests = this.parser.parse(jobName, map.get("definition"),
 					ParsingContext.job);
-			ModuleDeploymentRequest moduleDescriptor = requests.get(0);
+			ModuleDescriptor moduleDescriptor = requests.get(0);
 			// todo: support deployment properties for job modules
 			Module module = deployModule(moduleDescriptor, new ModuleDeploymentProperties());
 
@@ -439,7 +439,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			Stream stream = streamFactory.createStream(streamName,
 					mapBytesUtility.toMap(client.getData().forPath(Paths.build(Paths.STREAMS, streamName))));
 
-			ModuleDeploymentRequest descriptor = stream.getModuleDescriptor(moduleLabel, moduleType);
+			ModuleDescriptor descriptor = stream.getModuleDescriptor(moduleLabel, moduleType);
 			ModuleDeploymentProperties moduleDeploymentProperties = new ModuleDeploymentProperties();
 			for (String key : stream.getDeploymentProperties().keySet()) {
 				String prefix = String.format("module.%s.", descriptor.getModuleName());
@@ -505,7 +505,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	}
 
 	/**
-	 * Create a composed module based on the provided {@link ModuleDeploymentRequest}, {@link ModuleOptions}, and
+	 * Create a composed module based on the provided {@link ModuleDescriptor}, {@link ModuleOptions}, and
 	 * {@link ModuleDeploymentProperties}.
 	 * 
 	 * @param compositeDescriptor descriptor for the composed module
@@ -514,20 +514,20 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * 
 	 * @return new composed module instance
 	 * 
-	 * @see ModuleDeploymentRequest#isComposed
+	 * @see ModuleDescriptor#isComposed
 	 */
-	private Module createComposedModule(ModuleDeploymentRequest compositeDescriptor,
+	private Module createComposedModule(ModuleDescriptor compositeDescriptor,
 			ModuleOptions options, ModuleDeploymentProperties deploymentProperties) {
 		String streamName = compositeDescriptor.getGroup();
 		int index = compositeDescriptor.getIndex();
 		String sourceChannelName = compositeDescriptor.getSourceChannelName();
 		String sinkChannelName = compositeDescriptor.getSinkChannelName();
 
-		List<ModuleDeploymentRequest> children = compositeDescriptor.getChildren();
+		List<ModuleDescriptor> children = compositeDescriptor.getChildren();
 		Assert.notEmpty(children, "child module list must not be empty");
 
 		List<Module> childrenModules = new ArrayList<Module>(children.size());
-		for (ModuleDeploymentRequest childRequest : children) {
+		for (ModuleDescriptor childRequest : children) {
 			ModuleOptions narrowedOptions = new PrefixNarrowingModuleOptions(options, childRequest.getModuleName());
 			// todo: this below is hopefully not needed? (if parser includes in the child request already)
 			// if not, delete
@@ -546,7 +546,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	}
 
 	/**
-	 * Create a module based on the provided {@link ModuleDeploymentRequest}, {@link ModuleOptions}, and
+	 * Create a module based on the provided {@link ModuleDescriptor}, {@link ModuleOptions}, and
 	 * {@link ModuleDeploymentProperties}.
 	 * 
 	 * @param descriptor descriptor for the module
@@ -555,7 +555,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * 
 	 * @return new module instance
 	 */
-	private Module createSimpleModule(ModuleDeploymentRequest descriptor, ModuleOptions options,
+	private Module createSimpleModule(ModuleDescriptor descriptor, ModuleOptions options,
 			ModuleDeploymentProperties deploymentProperties) {
 		String streamName = descriptor.getGroup();
 		int index = descriptor.getIndex();
@@ -576,7 +576,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * 
 	 * @return module options bound with request parameters
 	 */
-	private ModuleOptions safeModuleOptionsInterpolate(ModuleDeploymentRequest descriptor) {
+	private ModuleOptions safeModuleOptionsInterpolate(ModuleDescriptor descriptor) {
 		// todo: this is empty for now
 		Map<String, String> parameters = descriptor.getParameters();
 		ModuleOptionsMetadata moduleOptionsMetadata = moduleOptionsMetadataResolver.resolve(descriptor.getModuleDefinition());

@@ -46,7 +46,7 @@ import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
 import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.core.StreamDeploymentsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 import org.springframework.xd.dirt.stream.JobDefinition;
 import org.springframework.xd.dirt.stream.ParsingContext;
 import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
@@ -193,9 +193,9 @@ public class ContainerListener implements PathChildrenCacheListener {
 			Map<String, String> map = mapBytesUtility.toMap(bytes);
 			JobDefinition jobDefinition = new JobDefinition(jobName, map.get("definition"));
 
-			List<ModuleDeploymentRequest> results = parser.parse(jobName, jobDefinition.getDefinition(),
+			List<ModuleDescriptor> results = parser.parse(jobName, jobDefinition.getDefinition(),
 					ParsingContext.job);
-			ModuleDeploymentRequest mdr = results.get(0);
+			ModuleDescriptor mdr = results.get(0);
 			String moduleLabel = mdr.getModuleName() + "-0";
 			String moduleType = ModuleType.job.toString();
 
@@ -245,8 +245,8 @@ public class ContainerListener implements PathChildrenCacheListener {
 			String streamName = streamDeploymentIterator.next();
 			Stream stream = loadStream(client, streamName);
 
-			for (Iterator<ModuleDeploymentRequest> descriptorIterator = stream.getDeploymentOrderIterator(); descriptorIterator.hasNext();) {
-				ModuleDeploymentRequest descriptor = descriptorIterator.next();
+			for (Iterator<ModuleDescriptor> descriptorIterator = stream.getDeploymentOrderIterator(); descriptorIterator.hasNext();) {
+				ModuleDescriptor descriptor = descriptorIterator.next();
 				ModuleDeploymentProperties moduleDeploymentProperties = new ModuleDeploymentProperties();
 				for (String key : stream.getDeploymentProperties().keySet()) {
 					String prefix = String.format("module.%s.", descriptor.getModuleName());
@@ -331,7 +331,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 	 * 
 	 * @throws Exception thrown by Curator
 	 */
-	private List<String> getContainersForStreamModule(CuratorFramework client, ModuleDeploymentRequest descriptor)
+	private List<String> getContainersForStreamModule(CuratorFramework client, ModuleDescriptor descriptor)
 			throws Exception {
 		try {
 			return client.getChildren().forPath(new StreamDeploymentsPath()
@@ -418,7 +418,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 						stream = loadStream(client, streamName);
 						streamMap.put(streamName, stream);
 					}
-					ModuleDeploymentRequest moduleDescriptor = stream.getModuleDescriptor(moduleLabel, moduleType);
+					ModuleDescriptor moduleDescriptor = stream.getModuleDescriptor(moduleLabel, moduleType);
 					ModuleDeploymentProperties moduleDeploymentProperties = new ModuleDeploymentProperties();
 					for (String key : stream.getDeploymentProperties().keySet()) {
 						String prefix = String.format("module.%s.", moduleDescriptor.getModuleName());

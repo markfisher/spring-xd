@@ -37,7 +37,7 @@ import org.springframework.xd.module.ModuleType;
  * @author Ilayaperumal Gopinathan
  * @author Patrick Peralta
  */
-public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentRequest> {
+public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 	/**
 	 * Name of module. Typically this module is present under
@@ -90,14 +90,14 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 	 * If this is a composite module, this list contains the modules that
 	 * this module consists of; otherwise this list is empty.
 	 */
-	private final List<ModuleDeploymentRequest> children;
+	private final List<ModuleDescriptor> children;
 
 	private final ModuleDefinition moduleDefinition;
 
 
 	/**
 	 * Construct a {@code ModuleDeploymentRequest}. This constructor is
-	 * private; use {@link org.springframework.xd.dirt.module.ModuleDeploymentRequest.Builder}
+	 * private; use {@link org.springframework.xd.dirt.module.ModuleDescriptor.Builder}
 	 * to create a new instance.
 	 *
 	 * @param moduleName         name of module
@@ -112,10 +112,10 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 	 * @param children           if this is a composite module, this list contains
 	 *                           the modules that comprise this module; may be {@code null}
 	 */
-	private ModuleDeploymentRequest(String moduleName, String moduleLabel,
+	private ModuleDescriptor(String moduleName, String moduleLabel,
 			String group, String sourceChannelName, String sinkChannelName,
 			int index, ModuleType type, ModuleDefinition moduleDefinition,
-			Map<String, String> parameters, List<ModuleDeploymentRequest> children) {
+			Map<String, String> parameters, List<ModuleDescriptor> children) {
 		this.moduleName = moduleName;
 		this.moduleLabel = moduleLabel;
 		this.group = group;
@@ -128,8 +128,8 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 				? Collections.<String, String>emptyMap()
 				: Collections.unmodifiableMap(new HashMap<String, String>(parameters));
 		this.children = children == null
-				? Collections.<ModuleDeploymentRequest>emptyList()
-				: Collections.unmodifiableList(new ArrayList<ModuleDeploymentRequest>(children));
+				? Collections.<ModuleDescriptor>emptyList()
+				: Collections.unmodifiableList(new ArrayList<ModuleDescriptor>(children));
 	}
 
 	/**
@@ -218,7 +218,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 	 * @return sub modules for this module, or empty list if this
 	 *         is not a composite module
 	 */
-	public List<ModuleDeploymentRequest> getChildren() {
+	public List<ModuleDescriptor> getChildren() {
 		return children;
 	}
 
@@ -244,7 +244,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 	 * {@inheritDoc}
 	 */
 	@Override
-	public int compareTo(ModuleDeploymentRequest o) {
+	public int compareTo(ModuleDescriptor o) {
 		Assert.notNull(o, "ModuleDeploymentRequest must not be null");
 		return Integer.compare(index, o.index);
 	}
@@ -262,56 +262,56 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 	}
 
 	/**
-	 * Builder object for {@link org.springframework.xd.dirt.module.ModuleDeploymentRequest}.
+	 * Builder object for {@link org.springframework.xd.dirt.module.ModuleDescriptor}.
 	 * This object is mutable to allow for flexibility in specifying module type/fields/parameters
 	 * during parsing.
 	 */
 	public static class Builder {
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#moduleName
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#moduleName
 		 */
 		private String moduleName;
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#moduleLabel
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#moduleLabel
 		 */
 		private String moduleLabel;
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#group
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#group
 		 */
 		private String group;
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#sourceChannelName
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#sourceChannelName
 		 */
 		private String sourceChannelName;
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#sinkChannelName
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#sinkChannelName
 		 */
 		private String sinkChannelName;
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#index
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#index
 		 */
 		private int index;
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#type
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#type
 		 */
 		private ModuleType type;
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#parameters
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#parameters
 		 */
 		private final Map<String, String> parameters = new HashMap<String, String>();
 
 		/**
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#children
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#children
 		 */
-		private final List<ModuleDeploymentRequest> children = new ArrayList<ModuleDeploymentRequest>();
+		private final List<ModuleDescriptor> children = new ArrayList<ModuleDescriptor>();
 
 		private ModuleDefinition moduleDefinition;
 
@@ -321,7 +321,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param moduleName name of module
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#moduleName
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#moduleName
 		 */
 		public Builder setModuleName(String moduleName) {
 			this.moduleName = moduleName;
@@ -334,7 +334,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param moduleLabel name of module label
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#moduleLabel
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#moduleLabel
 		 */
 		public Builder setModuleLabel(String moduleLabel) {
 			this.moduleLabel = moduleLabel;
@@ -347,7 +347,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param group name of module group
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#group
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#group
 		 */
 		public Builder setGroup(String group) {
 			this.group = group;
@@ -360,7 +360,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param sourceChannelName name of source channel; may be {@code null}
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#sourceChannelName
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#sourceChannelName
 		 */
 		public Builder setSourceChannelName(String sourceChannelName) {
 			this.sourceChannelName = sourceChannelName;
@@ -373,7 +373,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param sinkChannelName name of sink channel; may be {@code null}
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#sinkChannelName
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#sinkChannelName
 		 */
 		public Builder setSinkChannelName(String sinkChannelName) {
 			this.sinkChannelName = sinkChannelName;
@@ -386,7 +386,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param index position of module in stream/job definition
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#index
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#index
 		 */
 		public Builder setIndex(int index) {
 			this.index = index;
@@ -399,7 +399,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param type module type
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#type
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#type
 		 */
 		public Builder setType(ModuleType type) {
 			this.type = type;
@@ -413,9 +413,9 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param children sub modules
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#children
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#children
 		 */
-		public Builder addChildren(List<ModuleDeploymentRequest> children) {
+		public Builder addChildren(List<ModuleDescriptor> children) {
 			this.children.addAll(children);
 			return this;
 		}
@@ -427,7 +427,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param value  parameter value
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#parameters
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#parameters
 		 */
 		public Builder setParameter(String name, String value) {
 			this.parameters.put(name, value);
@@ -440,7 +440,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @param parameters module parameters
 		 * @return this builder object
 		 *
-		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#parameters
+		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#parameters
 		 */
 		public Builder addParameters(Map<String, String> parameters) {
 			this.parameters.putAll(parameters);
@@ -530,12 +530,12 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 
 		/**
 		 * Create a {@code Builder} object pre-populated with the configuration
-		 * for the provided {@link org.springframework.xd.dirt.module.ModuleDeploymentRequest}.
+		 * for the provided {@link org.springframework.xd.dirt.module.ModuleDescriptor}.
 		 *
 		 * @param request module descriptor
 		 * @return pre-populated builder object
 		 */
-		public static Builder fromModuleDeploymentRequest(ModuleDeploymentRequest request) {
+		public static Builder fromModuleDeploymentRequest(ModuleDescriptor request) {
 			Builder builder = new Builder();
 			builder.setModuleName(request.getModuleName());
 			builder.setModuleLabel(request.getModuleLabel());
@@ -552,12 +552,12 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		}
 
 		/**
-		 * Return a new instance of {@link org.springframework.xd.dirt.module.ModuleDeploymentRequest}.
+		 * Return a new instance of {@link org.springframework.xd.dirt.module.ModuleDescriptor}.
 		 *
 		 * @return new instance of {@code ModuleDeploymentRequest}
 		 */
-		public ModuleDeploymentRequest build() {
-			return new ModuleDeploymentRequest(moduleName, moduleLabel, group,
+		public ModuleDescriptor build() {
+			return new ModuleDescriptor(moduleName, moduleLabel, group,
 					sourceChannelName, sinkChannelName, index, type, moduleDefinition,
 					parameters, children);
 		}

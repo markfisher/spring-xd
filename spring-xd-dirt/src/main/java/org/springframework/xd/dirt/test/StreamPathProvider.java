@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.core.StreamDeploymentsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
 import org.springframework.xd.dirt.stream.StreamFactory;
 import org.springframework.xd.dirt.util.MapBytesUtility;
@@ -106,8 +106,8 @@ public class StreamPathProvider implements DeploymentPathProvider {
 		List<String> moduleDeploymentPaths = new ArrayList<String>();
 		try {
 			Stream stream = streamFactory.createStream(streamName, getStreamProperties(streamName));
-			for (Iterator<ModuleDeploymentRequest> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
-				ModuleDeploymentRequest descriptor = iterator.next();
+			for (Iterator<ModuleDescriptor> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
+				ModuleDescriptor descriptor = iterator.next();
 				moduleDeploymentPaths.add(new StreamDeploymentsPath()
 						.setStreamName(stream.getName())
 						.setModuleType(descriptor.getModuleDefinition().getType().toString())

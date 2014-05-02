@@ -36,7 +36,7 @@ import org.springframework.xd.dirt.core.JobDeploymentsPath;
 import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
 import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 import org.springframework.xd.dirt.stream.JobDefinition;
 import org.springframework.xd.dirt.stream.ParsingContext;
 import org.springframework.xd.dirt.stream.XDStreamParser;
@@ -189,9 +189,9 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 			Container container = containerIterator.next();
 			String containerName = container.getName();
 
-			List<ModuleDeploymentRequest> results = this.parser.parse(jobName, jobDefinition.getDefinition(),
+			List<ModuleDescriptor> results = this.parser.parse(jobName, jobDefinition.getDefinition(),
 					ParsingContext.job);
-			ModuleDeploymentRequest mdr = results.get(0);
+			ModuleDescriptor mdr = results.get(0);
 			String moduleLabel = mdr.getModuleName() + "-0";
 			String moduleType = ModuleType.job.toString();
 			String moduleDeploymentRequestPath = new ModuleDeploymentsPath().setContainer(containerName)
@@ -265,16 +265,16 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 	}
 
 	/**
-	 * Create an instance of {@link ModuleDeploymentRequest} for a given job name. This helper method is intended for
-	 * use in {@link ContainerMatcher#match(ModuleDeploymentRequest, ModuleDeploymentProperties, ContainerRepository)}
+	 * Create an instance of {@link ModuleDescriptor} for a given job name. This helper method is intended for
+	 * use in {@link ContainerMatcher#match(ModuleDescriptor, ModuleDeploymentProperties, ContainerRepository)}
 	 * when deploying jobs. This is intended to be temporary; future revisions of Jobs will include ModuleDescriptors.
 	 * 
 	 * @param jobName job name
 	 * 
 	 * @return a ModuleDescriptor for the given job
 	 */
-	public static ModuleDeploymentRequest createJobModuleDescriptor(String jobName) {
-		return new ModuleDeploymentRequest.Builder()
+	public static ModuleDescriptor createJobModuleDescriptor(String jobName) {
+		return new ModuleDescriptor.Builder()
 				.setGroup(jobName)
 				.setType(ModuleType.job)
 				.setModuleName(jobName)

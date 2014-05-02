@@ -19,7 +19,7 @@ package org.springframework.xd.dirt.cluster;
 import java.util.Collection;
 
 import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 
 /**
  * Strategy interface for matching a ModuleDeploymentRequest to one of the candidate container nodes.
@@ -37,7 +37,7 @@ public interface ContainerMatcher {
 	 * 
 	 * @return a collection of matched containers; collection is empty if no suitable containers are found
 	 */
-	Collection<Container> match(ModuleDeploymentRequest moduleDescriptor,
+	Collection<Container> match(ModuleDescriptor moduleDescriptor,
 			ModuleDeploymentProperties deploymentProperties, ContainerRepository containerRepository);
 
 }

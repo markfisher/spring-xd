@@ -34,11 +34,11 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 
 /**
  * Implementation of {@link ContainerMatcher} that returns a collection of containers to deploy a
- * {@link ModuleDeploymentRequest} to. This implementation examines the deployment properties for a stream to determine
+ * {@link ModuleDescriptor} to. This implementation examines the deployment properties for a stream to determine
  * the preferences for each individual module. The deployment properties can (optionally) specify two preferences:
  * <em>criteria</em> and <em>count</em>.
  * <p/>
@@ -90,7 +90,7 @@ public class DefaultContainerMatcher implements ContainerMatcher {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public Collection<Container> match(ModuleDeploymentRequest moduleDescriptor,
+	public Collection<Container> match(ModuleDescriptor moduleDescriptor,
 			ModuleDeploymentProperties deploymentProperties, ContainerRepository containerRepository) {
 		Assert.notNull(containerRepository, "'containerRepository' cannot be null.");
 		Assert.notNull(moduleDescriptor, "'moduleDescriptor' cannot be null.");

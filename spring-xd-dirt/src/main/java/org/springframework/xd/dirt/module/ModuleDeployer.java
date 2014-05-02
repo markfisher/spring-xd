@@ -102,12 +102,12 @@ public class ModuleDeployer implements ApplicationContextAware, BeanClassLoaderA
 	// but notice the use of 'group' which is abstract so it can also support jobs (not just streams)
 	// that terminology needs to change since group will be used in criteria expressions. Most likely we
 	// need to be more explicit about jobs vs. streams rather than trying to genericize into one concept.
-	public void deployAndStore(Module module, ModuleDeploymentRequest descriptor) {
+	public void deployAndStore(Module module, ModuleDescriptor descriptor) {
 		this.deployAndStore(module, descriptor.getGroup(), descriptor.getIndex());
 	}
 
 	// todo: same general idea as deployAndStore above
-	public void undeploy(ModuleDeploymentRequest moduleDescriptor) {
+	public void undeploy(ModuleDescriptor moduleDescriptor) {
 		this.handleUndeploy(moduleDescriptor.getGroup(), moduleDescriptor.getIndex());
 	}
 

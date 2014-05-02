@@ -41,7 +41,7 @@ import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
 import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.core.StreamDeploymentsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 import org.springframework.xd.dirt.stream.StreamDefinitionRepository;
 import org.springframework.xd.dirt.stream.StreamFactory;
 import org.springframework.xd.dirt.util.MapBytesUtility;
@@ -162,8 +162,8 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 	 * @param stream stream to be prepared
 	 */
 	private void prepareStream(CuratorFramework client, Stream stream) throws Exception {
-		for (Iterator<ModuleDeploymentRequest> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
-			ModuleDeploymentRequest descriptor = iterator.next();
+		for (Iterator<ModuleDescriptor> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
+			ModuleDescriptor descriptor = iterator.next();
 			String streamName = stream.getName();
 			String moduleType = descriptor.getModuleDefinition().getType().toString();
 			String moduleLabel = descriptor.getModuleLabel();
@@ -192,8 +192,8 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 	 * @throws Exception
 	 */
 	private void deployStream(CuratorFramework client, Stream stream) throws Exception {
-		for (Iterator<ModuleDeploymentRequest> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
-			ModuleDeploymentRequest descriptor = iterator.next();
+		for (Iterator<ModuleDescriptor> iterator = stream.getDeploymentOrderIterator(); iterator.hasNext();) {
+			ModuleDescriptor descriptor = iterator.next();
 			String streamName = stream.getName();
 			String moduleType = descriptor.getModuleDefinition().getType().toString();
 			String moduleName = descriptor.getModuleDefinition().getName();

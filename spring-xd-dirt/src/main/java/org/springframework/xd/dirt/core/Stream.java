@@ -29,7 +29,7 @@ import java.util.NoSuchElementException;
 
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 import org.springframework.xd.module.ModuleDefinition;
 import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.core.Module;
@@ -74,7 +74,7 @@ public class Stream {
 //	 */
 //	private final String sinkChannelName;
 
-	private final Deque<ModuleDeploymentRequest> descriptors;
+	private final Deque<ModuleDescriptor> descriptors;
 
 	/**
 	 * Deployment properties for this stream.
@@ -92,7 +92,7 @@ public class Stream {
 	 * @param sinkChannelName sink channel
 	 * @param deploymentProperties stream deployment properties
 	 */
-	private Stream(String name, Deque<ModuleDeploymentRequest> descriptors,  Map<String, String> deploymentProperties) {
+	private Stream(String name, Deque<ModuleDescriptor> descriptors,  Map<String, String> deploymentProperties) {
 		this.name = name;
 		this.descriptors = descriptors;
 		this.deploymentProperties = deploymentProperties;
@@ -121,7 +121,7 @@ public class Stream {
 	 *
 	 * @return list of processors
 	 */
-	public Deque<ModuleDeploymentRequest> getDescriptors() {
+	public Deque<ModuleDescriptor> getDescriptors() {
 		return descriptors;
 	}
 
@@ -141,7 +141,7 @@ public class Stream {
 	 *
 	 * @return iterator that iterates over the modules in deployment order
 	 */
-	public Iterator<ModuleDeploymentRequest> getDeploymentOrderIterator() {
+	public Iterator<ModuleDescriptor> getDeploymentOrderIterator() {
 		return descriptors.iterator();
 	}
 
@@ -197,8 +197,8 @@ public class Stream {
 		return "Stream{name='" + name + "'}";
 	}
 
-	public ModuleDeploymentRequest getModuleDescriptor(String moduleLabel, String moduleType) {
-		for (ModuleDeploymentRequest descriptor : descriptors) {
+	public ModuleDescriptor getModuleDescriptor(String moduleLabel, String moduleType) {
+		for (ModuleDescriptor descriptor : descriptors) {
 			if (descriptor.getModuleLabel().equals(moduleLabel)
 					&& descriptor.getType().toString().equals(moduleType)) {
 				return descriptor;
@@ -243,7 +243,7 @@ public class Stream {
 		 */
 		private Map<String, String> deploymentProperties = Collections.emptyMap();
 
-		private Deque<ModuleDeploymentRequest> moduleDescriptors = new LinkedList<ModuleDeploymentRequest>();
+		private Deque<ModuleDescriptor> moduleDescriptors = new LinkedList<ModuleDescriptor>();
 
 		/**
 		 * Set the stream name.
@@ -290,7 +290,7 @@ public class Stream {
 //			return this;
 //		}
 
-		public Builder setModuleDescriptors(Collection<ModuleDeploymentRequest> descriptors) {
+		public Builder setModuleDescriptors(Collection<ModuleDescriptor> descriptors) {
 			this.moduleDescriptors.addAll(descriptors);
 			return this;
 		}

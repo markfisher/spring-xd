@@ -27,7 +27,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
-import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
+import org.springframework.xd.dirt.module.ModuleDescriptor;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
@@ -61,8 +61,8 @@ public class StreamFactory {
 		Assert.hasText(definition, "Stream properties requires a 'definition' property");
 
 		String[] tokens = definition.split("\\|");
-		List<ModuleDeploymentRequest> requests = new ArrayList<ModuleDeploymentRequest>();
-		for (ModuleDeploymentRequest request : this.parser.parse(name, definition, ParsingContext.stream)) {
+		List<ModuleDescriptor> requests = new ArrayList<ModuleDescriptor>();
+		for (ModuleDescriptor request : this.parser.parse(name, definition, ParsingContext.stream)) {
 			requests.add(0, request);
 		}
 
