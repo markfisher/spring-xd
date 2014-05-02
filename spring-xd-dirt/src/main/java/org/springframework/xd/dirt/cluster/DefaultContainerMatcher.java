@@ -34,13 +34,12 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
-import org.springframework.xd.dirt.core.ModuleDescriptor;
 import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
 
 /**
  * Implementation of {@link ContainerMatcher} that returns a collection of containers to deploy a
- * {@link ModuleDescriptor} to. This implementation examines the deployment properties for a stream to determine the
- * preferences for each individual module. The deployment properties can (optionally) specify two preferences:
+ * {@link ModuleDeploymentRequest} to. This implementation examines the deployment properties for a stream to determine
+ * the preferences for each individual module. The deployment properties can (optionally) specify two preferences:
  * <em>criteria</em> and <em>count</em>.
  * <p/>
  * The criteria indicates that a module should only be deployed to a container for which the criteria evaluates to

@@ -35,7 +35,6 @@ import org.springframework.xd.dirt.cluster.DefaultContainerMatcher;
 import org.springframework.xd.dirt.core.JobDeploymentsPath;
 import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
 import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
-import org.springframework.xd.dirt.core.ModuleDescriptor;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
 import org.springframework.xd.dirt.module.ModuleDeploymentRequest;
 import org.springframework.xd.dirt.stream.JobDefinition;
@@ -266,9 +265,9 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 	}
 
 	/**
-	 * Create an instance of {@link ModuleDescriptor} for a given job name. This helper method is intended for use in
-	 * {@link ContainerMatcher#match(ModuleDescriptor, ContainerRepository)} when deploying jobs. This is intended to be
-	 * temporary; future revisions of Jobs will include ModuleDescriptors.
+	 * Create an instance of {@link ModuleDeploymentRequest} for a given job name. This helper method is intended for
+	 * use in {@link ContainerMatcher#match(ModuleDeploymentRequest, ModuleDeploymentProperties, ContainerRepository)}
+	 * when deploying jobs. This is intended to be temporary; future revisions of Jobs will include ModuleDescriptors.
 	 * 
 	 * @param jobName job name
 	 * 

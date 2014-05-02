@@ -54,8 +54,6 @@ import org.springframework.xd.dirt.container.store.ContainerAttributesRepository
 import org.springframework.xd.dirt.core.JobDeploymentsPath;
 import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
 import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
-import org.springframework.xd.dirt.core.ModuleDescriptor;
-import org.springframework.xd.dirt.core.ModuleDescriptor.Key;
 import org.springframework.xd.dirt.core.Stream;
 import org.springframework.xd.dirt.core.StreamDeploymentsPath;
 import org.springframework.xd.dirt.module.ModuleDefinitionRepository;
@@ -507,14 +505,16 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	}
 
 	/**
-	 * Create a composed module based on the provided {@link ModuleDescriptor} and {@link ModuleOptions}.
+	 * Create a composed module based on the provided {@link ModuleDeploymentRequest}, {@link ModuleOptions}, and
+	 * {@link ModuleDeploymentProperties}.
 	 * 
-	 * @param compositeDescriptor descriptor for composed module
-	 * @param options module options
+	 * @param compositeDescriptor descriptor for the composed module
+	 * @param options module options for the composed module
+	 * @param deploymentProperties deployment related properties for the composed module
 	 * 
 	 * @return new composed module instance
 	 * 
-	 * @see ModuleDescriptor#isComposed
+	 * @see ModuleDeploymentRequest#isComposed
 	 */
 	private Module createComposedModule(ModuleDeploymentRequest compositeDescriptor,
 			ModuleOptions options, ModuleDeploymentProperties deploymentProperties) {
@@ -546,10 +546,12 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	}
 
 	/**
-	 * Create a module based on the provided {@link ModuleDescriptor} and {@link ModuleOptions}.
+	 * Create a module based on the provided {@link ModuleDeploymentRequest}, {@link ModuleOptions}, and
+	 * {@link ModuleDeploymentProperties}.
 	 * 
-	 * @param descriptor descriptor for module
-	 * @param options module options
+	 * @param descriptor descriptor for the module
+	 * @param options module options for the module
+	 * @param deploymentProperties deployment related properties for the module
 	 * 
 	 * @return new module instance
 	 */
@@ -672,8 +674,8 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 				return true;
 			}
 
-			if (o instanceof Key) {
-				Key other = (Key) o;
+			if (o instanceof ModuleDescriptorKey) {
+				ModuleDescriptorKey other = (ModuleDescriptorKey) o;
 				return stream.equals(other.getStream())
 						&& type.equals(other.getType()) && label.equals(other.getLabel());
 			}
