@@ -52,6 +52,7 @@ import org.springframework.validation.BindException;
 import org.springframework.xd.dirt.container.ContainerAttributes;
 import org.springframework.xd.dirt.container.store.ContainerAttributesRepository;
 import org.springframework.xd.dirt.core.JobDeploymentsPath;
+import org.springframework.xd.dirt.core.ModuleDeploymentProperties;
 import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
 import org.springframework.xd.dirt.core.ModuleDescriptor;
 import org.springframework.xd.dirt.core.Stream;
@@ -218,13 +219,13 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 *
 	 * @param moduleDescriptor descriptor for the module to be deployed
 	 */
-	private Module deployModule(ModuleDescriptor moduleDescriptor) {
+	private Module deployModule(ModuleDeploymentRequest moduleDescriptor, ModuleDeploymentProperties deploymentProperties) {
 		logger.info("Deploying module {}", moduleDescriptor);
 		mapDeployedModules.put(moduleDescriptor.newKey(), moduleDescriptor);
 		ModuleOptions moduleOptions = this.safeModuleOptionsInterpolate(moduleDescriptor);
 		Module module = (moduleDescriptor.isComposed())
-				? createComposedModule(moduleDescriptor, moduleOptions)
-				: createSimpleModule(moduleDescriptor, moduleOptions);
+				? createComposedModule(moduleDescriptor, moduleOptions, deploymentProperties)
+				: createSimpleModule(moduleDescriptor, moduleOptions, deploymentProperties);
 		// todo: rather than delegate, merge ContainerRegistrar itself into and remove most of ModuleDeployer
 		this.moduleDeployer.deployAndStore(module, moduleDescriptor);
 		return module;
@@ -439,7 +440,16 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			Stream stream = streamFactory.createStream(streamName,
 					mapBytesUtility.toMap(client.getData().forPath(Paths.build(Paths.STREAMS, streamName))));
 
-			module = deployModule(stream.getModuleDescriptor(moduleLabel, moduleType));
+			ModuleDeploymentRequest descriptor = stream.getModuleDescriptor(moduleLabel, moduleType);
+			ModuleDeploymentProperties moduleDeploymentProperties = new ModuleDeploymentProperties();
+			for (String key : stream.getDeploymentProperties().keySet()) {
+				String prefix = String.format("module.%s.", descriptor.getModuleName());
+				if (key.startsWith(prefix)) {
+					moduleDeploymentProperties.put(key.substring(prefix.length()), stream.getDeploymentProperties().get(key));
+				}
+			}
+
+			module = deployModule(descriptor, moduleDeploymentProperties);
 
 			// this indicates that the container has deployed the module
 			client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
@@ -504,15 +514,14 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 *
 	 * @see ModuleDescriptor#isComposed
 	 */
-	private Module createComposedModule(ModuleDescriptor compositeDescriptor, ModuleOptions options) {
-		String streamName = compositeDescriptor.getStreamName();
+	private Module createComposedModule(ModuleDeploymentRequest compositeDescriptor,
+			ModuleOptions options, ModuleDeploymentProperties deploymentProperties) {
+		String streamName = compositeDescriptor.getGroup();
 		int index = compositeDescriptor.getIndex();
 		String sourceChannelName = compositeDescriptor.getSourceChannelName();
 		String sinkChannelName = compositeDescriptor.getSinkChannelName();
-		ModuleDefinition compositeDefinition = compositeDescriptor.getModuleDefinition();
 
-		List<ModuleDeploymentRequest> children = this.parser.parse(
-				compositeDefinition.getName(), compositeDefinition.getDefinition(), ParsingContext.module);
+		List<ModuleDeploymentRequest> children = compositeDescriptor.getChildren();
 		Assert.notEmpty(children, "child module list must not be empty");
 
 		List<Module> childrenModules = new ArrayList<Module>(children.size());
@@ -522,13 +531,13 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 					childRequest.getModuleName(), childRequest.getType());
 			String label = ""; // todo: this should be the valid label for each module
 			ModuleDescriptor childDescriptor = new ModuleDescriptor(childDefinition,
-					childRequest.getGroup(), label, childRequest.getIndex(), compositeDescriptor.getDeploymentProperties());
+					childRequest.getGroup(), label, childRequest.getIndex(), deploymentProperties);
 			// todo: hacky, but due to parser results being reversed, we add each at index 0
 			childrenModules.add(0, createSimpleModule(childDescriptor, narrowedOptions));
 		}
 		DeploymentMetadata metadata = new DeploymentMetadata(streamName, index, sourceChannelName, sinkChannelName);
-		return new CompositeModule(compositeDefinition.getName(), compositeDefinition.getType(), childrenModules,
-				metadata);
+		return new CompositeModule(compositeDescriptor.getModuleName(), compositeDescriptor.getType(),
+				childrenModules, metadata);
 	}
 
 	/**
@@ -539,8 +548,9 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 *
 	 * @return new module instance
 	 */
-	private Module createSimpleModule(ModuleDescriptor descriptor, ModuleOptions options) {
-		String streamName = descriptor.getStreamName();
+	private Module createSimpleModule(ModuleDeploymentRequest descriptor, ModuleOptions options,
+			ModuleDeploymentProperties deploymentProperties) {
+		String streamName = descriptor.getGroup();
 		int index = descriptor.getIndex();
 		String sourceChannelName = descriptor.getSourceChannelName();
 		String sinkChannelName = descriptor.getSinkChannelName();
@@ -559,7 +569,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 *
 	 * @return module options bound with request parameters
 	 */
-	private ModuleOptions safeModuleOptionsInterpolate(ModuleDescriptor descriptor) {
+	private ModuleOptions safeModuleOptionsInterpolate(ModuleDeploymentRequest descriptor) {
 		// todo: this is empty for now
 		Map<String, String> parameters = descriptor.getParameters();
 		ModuleOptionsMetadata moduleOptionsMetadata = moduleOptionsMetadataResolver.resolve(descriptor.getModuleDefinition());

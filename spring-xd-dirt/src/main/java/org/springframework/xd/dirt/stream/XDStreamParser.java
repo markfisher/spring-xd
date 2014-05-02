@@ -153,6 +153,7 @@ public class XDStreamParser implements XDParser {
 			// definition is guaranteed to be non-null here
 			ModuleDefinition moduleDefinition = moduleDefinitionRepository
 					.findByNameAndType(builder.getModuleName(), builder.getType());
+			builder.setModuleDefinition(moduleDefinition);
 			ModuleOptionsMetadata optionsMetadata = moduleOptionsMetadataResolver.resolve(moduleDefinition);
 			if (parsingContext.shouldBindAndValidate()) {
 				try {

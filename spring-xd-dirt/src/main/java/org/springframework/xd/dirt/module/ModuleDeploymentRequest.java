@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.util.Assert;
+import org.springframework.xd.module.ModuleDefinition;
 import org.springframework.xd.module.ModuleType;
 
 /**
@@ -91,6 +92,8 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 	 */
 	private final List<ModuleDeploymentRequest> children;
 
+	private final ModuleDefinition moduleDefinition;
+
 
 	/**
 	 * Construct a {@code ModuleDeploymentRequest}. This constructor is
@@ -104,14 +107,15 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 	 * @param sinkChannelName    name of sink channel; may be {@code null}
 	 * @param index              position of module in stream/job definition
 	 * @param type               module type
+	 * @parma moduleDefinition   module definition
 	 * @param parameters         module parameters; may be {@code null}
 	 * @param children           if this is a composite module, this list contains
 	 *                           the modules that comprise this module; may be {@code null}
 	 */
 	private ModuleDeploymentRequest(String moduleName, String moduleLabel,
 			String group, String sourceChannelName, String sinkChannelName,
-			int index, ModuleType type, Map<String, String> parameters,
-			List<ModuleDeploymentRequest> children) {
+			int index, ModuleType type, ModuleDefinition moduleDefinition,
+			Map<String, String> parameters, List<ModuleDeploymentRequest> children) {
 		this.moduleName = moduleName;
 		this.moduleLabel = moduleLabel;
 		this.group = group;
@@ -119,6 +123,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		this.sinkChannelName = sinkChannelName;
 		this.index = index;
 		this.type = type;
+		this.moduleDefinition = moduleDefinition;
 		this.parameters = parameters == null
 				? Collections.<String, String>emptyMap()
 				: Collections.unmodifiableMap(new HashMap<String, String>(parameters));
@@ -244,6 +249,17 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		return Integer.compare(index, o.index);
 	}
 
+	/**
+	 * todo
+	 * @return
+	 */
+	public boolean isComposed() {
+		return !children.isEmpty();
+	}
+
+	public ModuleDefinition getModuleDefinition() {
+		return moduleDefinition;
+	}
 
 	/**
 	 * Builder object for {@link org.springframework.xd.dirt.module.ModuleDeploymentRequest}.
@@ -296,6 +312,8 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 * @see org.springframework.xd.dirt.module.ModuleDeploymentRequest#children
 		 */
 		private final List<ModuleDeploymentRequest> children = new ArrayList<ModuleDeploymentRequest>();
+
+		private ModuleDefinition moduleDefinition;
 
 		/**
 		 * Set the module name.
@@ -526,6 +544,7 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 			builder.setSinkChannelName(request.getSinkChannelName());
 			builder.setIndex(request.getIndex());
 			builder.setType(request.getType());
+			builder.setModuleDefinition(request.getModuleDefinition());
 			builder.addParameters(request.getParameters());
 			builder.addChildren(request.getChildren());
 
@@ -539,8 +558,17 @@ public class ModuleDeploymentRequest implements Comparable<ModuleDeploymentReque
 		 */
 		public ModuleDeploymentRequest build() {
 			return new ModuleDeploymentRequest(moduleName, moduleLabel, group,
-					sourceChannelName, sinkChannelName, index, type, parameters, children);
+					sourceChannelName, sinkChannelName, index, type, moduleDefinition,
+					parameters, children);
 		}
 
+		public Builder setModuleDefinition(ModuleDefinition moduleDefinition) {
+			this.moduleDefinition = moduleDefinition;
+			return this;
+		}
+
+		public ModuleDefinition getModuleDefinition() {
+			return moduleDefinition;
+		}
 	}
 }
