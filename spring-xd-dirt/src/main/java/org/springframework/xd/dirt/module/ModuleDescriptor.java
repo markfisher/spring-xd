@@ -28,8 +28,8 @@ import org.springframework.xd.module.ModuleDefinition;
 import org.springframework.xd.module.ModuleType;
 
 /**
- * Representation of a module in the context of a defined stream or job. TODO: this will be renamed to ModuleDescriptor.
- * 
+ * Representation of a module in the context of a defined stream or job.
+ *
  * @author Mark Fisher
  * @author Gary Russell
  * @author Luke Taylor
@@ -92,7 +92,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 	/**
 	 * Construct a {@code ModuleDeploymentRequest}. This constructor is private; use
 	 * {@link org.springframework.xd.dirt.module.ModuleDescriptor.Builder} to create a new instance.
-	 * 
+	 *
 	 * @param moduleName name of module
 	 * @param moduleLabel label used for module in stream/job definition
 	 * @param group group this module belongs to (stream/job)
@@ -127,7 +127,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 	/**
 	 * Return name of module. Typically this module is present under {@code $XD_HOME/modules/[module type]}.
-	 * 
+	 *
 	 * @return module name
 	 */
 	public String getModuleName() {
@@ -136,7 +136,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 	/**
 	 * Return symbolic name of a module. This may be generated to a default value or specified in the DSL string.
-	 * 
+	 *
 	 * @return module label
 	 */
 	public String getModuleLabel() {
@@ -148,7 +148,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 	/**
 	 * Return name of deployable unit this module instance belongs to (such as a stream or job).
-	 * 
+	 *
 	 * @return group name
 	 */
 	public String getGroup() {
@@ -158,7 +158,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 	/**
 	 * Return position in stream/job definition relative to the other modules in the definition. 0 indicates the
 	 * first/leftmost position.
-	 * 
+	 *
 	 * @return module index
 	 */
 	public int getIndex() {
@@ -167,7 +167,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 	/**
 	 * Return the module type.
-	 * 
+	 *
 	 * @return module type
 	 */
 	public ModuleType getType() {
@@ -176,7 +176,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 	/**
 	 * Return name of source channel, if defined by the stream/job definition. May be null.
-	 * 
+	 *
 	 * @return source channel name, or {@code null} if no source channel defined
 	 */
 	public String getSourceChannelName() {
@@ -185,7 +185,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 	/**
 	 * Return name of sink channel, if defined by the stream/job definition. May be null.
-	 * 
+	 *
 	 * @return sink channel name, or {@code null} if no sink channel defined
 	 */
 	public String getSinkChannelName() {
@@ -195,7 +195,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 	/**
 	 * Return parameters for module. This is specific to the type of module - for instance an http module would include
 	 * a port number as a parameter.
-	 * 
+	 *
 	 * @return read-only map of module parameters
 	 */
 	public Map<String, String> getParameters() {
@@ -205,7 +205,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 	/**
 	 * If this is a composite module, this list contains the modules that this module consists of; otherwise this list
 	 * is empty.
-	 * 
+	 *
 	 * @return sub modules for this module, or empty list if this is not a composite module
 	 */
 	public List<ModuleDescriptor> getChildren() {
@@ -241,7 +241,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 	/**
 	 * todo
-	 * 
+	 *
 	 * @return
 	 */
 	public boolean isComposed() {
@@ -307,10 +307,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Set the module name.
-		 * 
+		 *
 		 * @param moduleName name of module
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#moduleName
 		 */
 		public Builder setModuleName(String moduleName) {
@@ -320,10 +320,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Set the module label.
-		 * 
+		 *
 		 * @param moduleLabel name of module label
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#moduleLabel
 		 */
 		public Builder setModuleLabel(String moduleLabel) {
@@ -333,10 +333,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Set the module group.
-		 * 
+		 *
 		 * @param group name of module group
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#group
 		 */
 		public Builder setGroup(String group) {
@@ -346,10 +346,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Set the module source channel name.
-		 * 
+		 *
 		 * @param sourceChannelName name of source channel; may be {@code null}
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#sourceChannelName
 		 */
 		public Builder setSourceChannelName(String sourceChannelName) {
@@ -359,10 +359,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Set the module sink channel name.
-		 * 
+		 *
 		 * @param sinkChannelName name of sink channel; may be {@code null}
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#sinkChannelName
 		 */
 		public Builder setSinkChannelName(String sinkChannelName) {
@@ -372,10 +372,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Set the module index.
-		 * 
+		 *
 		 * @param index position of module in stream/job definition
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#index
 		 */
 		public Builder setIndex(int index) {
@@ -385,10 +385,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Set the module type.
-		 * 
+		 *
 		 * @param type module type
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#type
 		 */
 		public Builder setType(ModuleType type) {
@@ -399,10 +399,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 		/**
 		 * Add the list of children to the list of sub modules. This only applies if this builder is for a composite
 		 * module.
-		 * 
+		 *
 		 * @param children sub modules
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#children
 		 */
 		public Builder addChildren(List<ModuleDescriptor> children) {
@@ -412,11 +412,11 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Set a module parameter.
-		 * 
+		 *
 		 * @param name parameter name
 		 * @param value parameter value
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#parameters
 		 */
 		public Builder setParameter(String name, String value) {
@@ -426,10 +426,10 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Add the contents of the provided map to the map of module parameters.
-		 * 
+		 *
 		 * @param parameters module parameters
 		 * @return this builder object
-		 * 
+		 *
 		 * @see org.springframework.xd.dirt.module.ModuleDescriptor#parameters
 		 */
 		public Builder addParameters(Map<String, String> parameters) {
@@ -439,7 +439,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Return name of module. Typically this module is present under {@code $XD_HOME/modules/[module type]}.
-		 * 
+		 *
 		 * @return module name
 		 */
 		public String getModuleName() {
@@ -448,7 +448,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Return symbolic name of a module. This may be generated to a default value or specified in the DSL string.
-		 * 
+		 *
 		 * @return module label
 		 */
 		public String getModuleLabel() {
@@ -460,7 +460,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Return name of deployable unit this module instance belongs to (such as a stream or job).
-		 * 
+		 *
 		 * @return group name
 		 */
 		public String getGroup() {
@@ -469,7 +469,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Return name of source channel, if defined by the stream/job definition. May be null.
-		 * 
+		 *
 		 * @return source channel name, or {@code null} if no source channel defined
 		 */
 		public String getSourceChannelName() {
@@ -478,7 +478,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Return name of sink channel, if defined by the stream/job definition. May be null.
-		 * 
+		 *
 		 * @return sink channel name, or {@code null} if no sink channel defined
 		 */
 		public String getSinkChannelName() {
@@ -488,7 +488,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 		/**
 		 * Return position in stream/job definition relative to the other modules in the definition. 0 indicates the
 		 * first/leftmost position.
-		 * 
+		 *
 		 * @return module index
 		 */
 		public int getIndex() {
@@ -497,7 +497,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Return the module type.
-		 * 
+		 *
 		 * @return module type
 		 */
 		public ModuleType getType() {
@@ -508,7 +508,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 		 * Return parameters for module. This is specific to the type of module - for instance an http module would
 		 * include a port number as a parameter. <br />
 		 * Note that the contents of this map are <b>mutable</b>.
-		 * 
+		 *
 		 * @return map of module parameters
 		 */
 		public Map<String, String> getParameters() {
@@ -518,7 +518,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 		/**
 		 * Create a {@code Builder} object pre-populated with the configuration for the provided
 		 * {@link org.springframework.xd.dirt.module.ModuleDescriptor}.
-		 * 
+		 *
 		 * @param request module descriptor
 		 * @return pre-populated builder object
 		 */
@@ -540,7 +540,7 @@ public class ModuleDescriptor implements Comparable<ModuleDescriptor> {
 
 		/**
 		 * Return a new instance of {@link org.springframework.xd.dirt.module.ModuleDescriptor}.
-		 * 
+		 *
 		 * @return new instance of {@code ModuleDeploymentRequest}
 		 */
 		public ModuleDescriptor build() {

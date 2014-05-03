@@ -38,7 +38,7 @@ import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
  * Provides path information for stream definitions, deployments, and stream module deployments.
- * 
+ *
  * @author David Turanski
  * @author Mark Fisher
  * @author Patrick Peralta
@@ -67,7 +67,7 @@ public class StreamPathProvider implements DeploymentPathProvider {
 
 	/**
 	 * Construct a StreamPathProvider.
-	 * 
+	 *
 	 * @param zkConnection ZooKeeper connection
 	 * @param streamDefinitionRepository repository for stream definitions
 	 * @param moduleDefinitionRepository repository for module definitions
@@ -133,7 +133,7 @@ public class StreamPathProvider implements DeploymentPathProvider {
 
 	/**
 	 * Return the data for a stream from ZooKeeper.
-	 * 
+	 *
 	 * @param streamName stream name
 	 * @return properties for a stream
 	 */

@@ -47,7 +47,7 @@ import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
  * Listener implementation that handles job deployment requests.
- * 
+ *
  * @author Patrick Peralta
  * @author Mark Fisher
  */
@@ -86,7 +86,7 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Construct a JobDeploymentListener.
-	 * 
+	 *
 	 * @param containerRepository repository to obtain container data
 	 * @param moduleDefinitionRepository repository to obtain module data
 	 * @param moduleOptionsMetadataResolver resolver for module options metadata
@@ -135,7 +135,7 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Handle the creation of a new job deployment.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param data job deployment request data
 	 */
@@ -151,7 +151,7 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Handle the deletion of a job deployment.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param data job deployment request data
 	 */
@@ -172,7 +172,7 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Issue deployment requests for the job.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param jobDefinition job to be deployed
 	 */
@@ -244,10 +244,10 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Issue undeployment requests for the job.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param jobDefinition job to be undeployed
-	 * 
+	 *
 	 * @throws Exception
 	 */
 	private void undeployJob(CuratorFramework client, JobDefinition jobDefinition) throws Exception {
@@ -265,12 +265,12 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 	}
 
 	/**
-	 * Create an instance of {@link ModuleDescriptor} for a given job name. This helper method is intended for
-	 * use in {@link ContainerMatcher#match(ModuleDescriptor, ModuleDeploymentProperties, ContainerRepository)}
-	 * when deploying jobs. This is intended to be temporary; future revisions of Jobs will include ModuleDescriptors.
-	 * 
+	 * Create an instance of {@link ModuleDescriptor} for a given job name. This helper method is intended for use in
+	 * {@link ContainerMatcher#match(ModuleDescriptor, ModuleDeploymentProperties, ContainerRepository)} when deploying
+	 * jobs. This is intended to be temporary; future revisions of Jobs will include ModuleDescriptors.
+	 *
 	 * @param jobName job name
-	 * 
+	 *
 	 * @return a ModuleDescriptor for the given job
 	 */
 	public static ModuleDescriptor createJobModuleDescriptor(String jobName) {
@@ -281,8 +281,6 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 				.setModuleLabel(jobName)
 				.setIndex(0)
 				.build();
-		// return new ModuleDescriptor(new ModuleDefinition(jobName, ModuleType.job),
-		// jobName, jobName, 0, null);
 	}
 
 }

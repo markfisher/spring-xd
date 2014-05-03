@@ -86,13 +86,13 @@ import org.springframework.xd.module.support.ParentLastURLClassLoader;
  * registrar is closed, that ephemeral node will be eagerly deleted. Since the {@link ZooKeeperConnection} typically has
  * its lifecycle managed by Spring, that would be the normal behavior when the owning {@link ApplicationContext} is
  * itself closed.
- * 
+ *
  * @author Mark Fisher
  * @author David Turanski
  */
 // todo: Rename ContainerServer or ModuleDeployer since it's driven by callbacks and not really a "server".
 public class ContainerRegistrar implements ApplicationListener<ContextRefreshedEvent>, ApplicationContextAware,
-		BeanClassLoaderAware {
+BeanClassLoaderAware {
 
 	/**
 	 * Logger.
@@ -186,7 +186,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 * {@link ZooKeeperConnection} is established. If that connection is already established at the time this instance
 	 * receives a {@link ContextRefreshedEvent}, the attributes will be registered then. Otherwise, registration occurs
 	 * within a callback that is invoked for connected events as well as reconnected events.
-	 * 
+	 *
 	 * @param containerAttributes runtime and configured attributes for the container
 	 * @param streamDefinitionRepository repository for streams
 	 * @param moduleDefinitionRepository repository for modules
@@ -215,7 +215,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Deploy the requested module.
-	 * 
+	 *
 	 * @param moduleDescriptor descriptor for the module to be deployed
 	 */
 	private Module deployModule(ModuleDescriptor moduleDescriptor,
@@ -225,8 +225,8 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 				moduleDescriptor.getModuleLabel());
 		mapDeployedModules.put(key, moduleDescriptor);
 		ModuleOptions moduleOptions = this.safeModuleOptionsInterpolate(moduleDescriptor);
-		Module module = (moduleDescriptor.isComposed())
-				? createComposedModule(moduleDescriptor, moduleOptions, deploymentProperties)
+		Module module = (moduleDescriptor.isComposed()) ? createComposedModule(moduleDescriptor, moduleOptions,
+				deploymentProperties)
 				: createSimpleModule(moduleDescriptor, moduleOptions, deploymentProperties);
 		// todo: rather than delegate, merge ContainerRegistrar itself into and remove most of ModuleDeployer
 		this.moduleDeployer.deployAndStore(module, moduleDescriptor);
@@ -235,7 +235,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Undeploy the requested module.
-	 * 
+	 *
 	 * @param streamName name of the stream for the module
 	 * @param moduleType module type
 	 * @param moduleLabel module label
@@ -350,7 +350,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Event handler for new module deployments.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param data module data
 	 */
@@ -359,8 +359,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		String streamName = moduleDeploymentsPath.getStreamName();
 		String moduleType = moduleDeploymentsPath.getModuleType();
 		String moduleLabel = moduleDeploymentsPath.getModuleLabel();
-		Module module = (ModuleType.job.toString().equals(moduleType))
-				? deployJob(client, streamName, moduleLabel)
+		Module module = (ModuleType.job.toString().equals(moduleType)) ? deployJob(client, streamName, moduleLabel)
 				: deployStreamModule(client, streamName, moduleType, moduleLabel);
 		if (module != null) {
 			Map<String, String> map = new HashMap<String, String>();
@@ -377,7 +376,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Deploy the requested job.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param jobName job name
 	 * @param jobLabel job label
@@ -419,7 +418,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Deploy the requested module for a stream.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param streamName name of the stream for the module
 	 * @param moduleType module type
@@ -474,7 +473,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 	/**
 	 * Event handler for deployment removals.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param data module data
 	 */
@@ -507,13 +506,13 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	/**
 	 * Create a composed module based on the provided {@link ModuleDescriptor}, {@link ModuleOptions}, and
 	 * {@link ModuleDeploymentProperties}.
-	 * 
+	 *
 	 * @param compositeDescriptor descriptor for the composed module
 	 * @param options module options for the composed module
 	 * @param deploymentProperties deployment related properties for the composed module
-	 * 
+	 *
 	 * @return new composed module instance
-	 * 
+	 *
 	 * @see ModuleDescriptor#isComposed
 	 */
 	private Module createComposedModule(ModuleDescriptor compositeDescriptor,
@@ -529,14 +528,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		List<Module> childrenModules = new ArrayList<Module>(children.size());
 		for (ModuleDescriptor childRequest : children) {
 			ModuleOptions narrowedOptions = new PrefixNarrowingModuleOptions(options, childRequest.getModuleName());
-			// todo: this below is hopefully not needed? (if parser includes in the child request already)
-			// if not, delete
-			// ModuleDefinition childDefinition = this.moduleDefinitionRepository.findByNameAndType(
-			// childRequest.getModuleName(), childRequest.getType());
-			// String label = ""; // todo: this should be the valid label for each module
-			// ModuleDescriptor childDescriptor = new ModuleDescriptor(childDefinition,
-			// childRequest.getGroup(), label, childRequest.getIndex(), deploymentProperties);
-			// todo: hacky, but due to parser results being reversed, we add each at index 0
+			// due to parser results being reversed, we add each at index 0
 			// todo: is it right to pass the composite deploymentProperties here?
 			childrenModules.add(0, createSimpleModule(childRequest, narrowedOptions, deploymentProperties));
 		}
@@ -548,11 +540,11 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	/**
 	 * Create a module based on the provided {@link ModuleDescriptor}, {@link ModuleOptions}, and
 	 * {@link ModuleDeploymentProperties}.
-	 * 
+	 *
 	 * @param descriptor descriptor for the module
 	 * @param options module options for the module
 	 * @param deploymentProperties deployment related properties for the module
-	 * 
+	 *
 	 * @return new module instance
 	 */
 	private Module createSimpleModule(ModuleDescriptor descriptor, ModuleOptions options,
@@ -571,13 +563,12 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	/**
 	 * Takes a request and returns an instance of {@link ModuleOptions} bound with the request parameters. Binding is
 	 * assumed to not fail, as it has already been validated on the admin side.
-	 * 
+	 *
 	 * @param descriptor module descriptor for which to bind request parameters
-	 * 
+	 *
 	 * @return module options bound with request parameters
 	 */
 	private ModuleOptions safeModuleOptionsInterpolate(ModuleDescriptor descriptor) {
-		// todo: this is empty for now
 		Map<String, String> parameters = descriptor.getParameters();
 		ModuleOptionsMetadata moduleOptionsMetadata = moduleOptionsMetadataResolver.resolve(descriptor.getModuleDefinition());
 		try {
@@ -612,7 +603,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 		/**
 		 * Construct a key.
-		 * 
+		 *
 		 * @param stream stream name
 		 * @param type module type
 		 * @param label module label
@@ -628,7 +619,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 		/**
 		 * Return the name of the stream.
-		 * 
+		 *
 		 * @return stream name
 		 */
 		public String getStream() {
@@ -637,7 +628,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 		/**
 		 * Return the module type.
-		 * 
+		 *
 		 * @return module type
 		 */
 		public ModuleType getType() {
@@ -646,7 +637,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 
 		/**
 		 * Return the module label.
-		 * 
+		 *
 		 * @return module label
 		 */
 		public String getLabel() {
@@ -699,7 +690,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 		 */
 		@Override
 		public String toString() {
-			return "Key{" +
+			return "ModuleDeploymentKey{" +
 					"stream='" + stream + '\'' +
 					", type=" + type +
 					", label='" + label + '\'' +

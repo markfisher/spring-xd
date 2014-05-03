@@ -60,7 +60,7 @@ import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
  * Listener implementation that is invoked when containers are added/removed/modified.
- * 
+ *
  * @author Patrick Peralta
  * @author Mark Fisher
  */
@@ -91,7 +91,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 
 	/**
 	 * {@link Converter} from {@link ChildData} in stream deployments to Stream name.
-	 * 
+	 *
 	 * @see #streamDeployments
 	 */
 	private final DeploymentNameConverter deploymentNameConverter = new DeploymentNameConverter();
@@ -119,7 +119,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 
 	/**
 	 * Construct a ContainerListener.
-	 * 
+	 *
 	 * @param containerRepository repository for container data
 	 * @param streamDefinitionRepository repository for streams
 	 * @param moduleDefinitionRepository repository for module definitions
@@ -171,7 +171,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 	/**
 	 * Handle the arrival of a container. This implementation will scan the existing streams and determine if any
 	 * modules should be deployed to the new container.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param data node data for the container that arrived
 	 */
@@ -322,13 +322,13 @@ public class ContainerListener implements PathChildrenCacheListener {
 
 	/**
 	 * Determine which containers, if any, have deployed a module for a stream.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param descriptor module descriptor
-	 * 
+	 *
 	 * @return list of containers that have deployed this module; empty list is returned if no containers have deployed
 	 *         it
-	 * 
+	 *
 	 * @throws Exception thrown by Curator
 	 */
 	private List<String> getContainersForStreamModule(CuratorFramework client, ModuleDescriptor descriptor)
@@ -347,7 +347,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 	/**
 	 * This will load the {@link Stream} instance for a given stream name. It will include the stream definition as well
 	 * as any deployment properties data for the stream deployment.
-	 * 
+	 *
 	 * @param client {@link CuratorFramework} instance used to retrieve data for this stream
 	 * @param streamName the name of the stream to load
 	 * @return the stream instance
@@ -366,7 +366,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 	/**
 	 * Handle the departure of a container. This will scan the list of modules deployed to the departing container and
 	 * redeploy them if required.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param data node data for the container that departed
 	 */

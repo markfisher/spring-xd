@@ -40,7 +40,7 @@ import org.springframework.xd.module.core.Plugin;
 /**
  * Listens for deployment request messages and instantiates {@link Module}s accordingly, applying {@link Plugin} logic
  * to them.
- * 
+ *
  * @author Mark Fisher
  * @author Gary Russell
  * @author Ilayaperumal Gopinathan
@@ -164,7 +164,7 @@ public class ModuleDeployer implements ApplicationContextAware, BeanClassLoaderA
 
 	/**
 	 * Get the list of supported plugins for the given module.
-	 * 
+	 *
 	 * @param module
 	 * @return list supported list of plugins
 	 */

@@ -50,7 +50,7 @@ import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
 /**
  * Listener implementation that handles stream deployment requests.
- * 
+ *
  * @author Patrick Peralta
  * @author Mark Fisher
  */
@@ -84,7 +84,7 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 	/**
 	 * Executor service dedicated to handling events raised from
 	 * {@link org.apache.curator.framework.recipes.cache.PathChildrenCache}.
-	 * 
+	 *
 	 * @see #childEvent
 	 * @see StreamDeploymentListener.EventHandler
 	 */
@@ -100,7 +100,7 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Construct a StreamDeploymentListener.
-	 * 
+	 *
 	 * @param containerRepository repository to obtain container data
 	 * @param moduleDefinitionRepository repository to obtain module data
 	 * @param moduleOptionsMetadataResolver resolver for module options metadata
@@ -126,7 +126,7 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Handle the creation of a new stream deployment.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param data stream deployment request data
 	 */
@@ -157,7 +157,7 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 	 * </ul>
 	 * The children of these nodes will be ephemeral nodes written by the containers that accept deployment of the
 	 * modules.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param stream stream to be prepared
 	 */
@@ -185,10 +185,10 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 
 	/**
 	 * Issue deployment requests for the modules of the given stream.
-	 * 
+	 *
 	 * @param client curator client
 	 * @param stream stream to be deployed
-	 * 
+	 *
 	 * @throws Exception
 	 */
 	private void deployStream(CuratorFramework client, Stream stream) throws Exception {
@@ -286,7 +286,7 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 
 		/**
 		 * Construct an {@code EventHandler}.
-		 * 
+		 *
 		 * @param client curator client
 		 * @param event event raised from Curator
 		 */
