@@ -16,6 +16,9 @@
 
 package org.springframework.xd.dirt.plugins;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.integration.channel.ChannelInterceptorAware;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.channel.interceptor.WireTap;
@@ -64,12 +67,26 @@ public abstract class AbstractMessageBusBinderPlugin extends AbstractPlugin {
 	 * @param module the module whose consumer and producers to bind to the {@link MessageBus}.
 	 */
 	protected final void bindConsumerAndProducers(Module module) {
+		Map<String, String> consumerProperties = new HashMap<String, String>();
+		Map<String, String> producerProperties = new HashMap<String, String>();
+		String consumerKeyPrefix = "consumer.";
+		String producerKeyPrefix = "producer.";
+		for (Map.Entry<String, String> entry : module.getDeploymentProperties().entrySet()) {
+			if (entry.getKey().startsWith(consumerKeyPrefix)) {
+				consumerProperties.put(entry.getKey().substring(consumerKeyPrefix.length()), entry.getValue());
+			}
+			else if (entry.getKey().startsWith(producerKeyPrefix)) {
+				producerProperties.put(entry.getKey().substring(producerKeyPrefix.length()), entry.getValue());
+			}
+		}
 		MessageChannel inputChannel = module.getComponent(MODULE_INPUT_CHANNEL, MessageChannel.class);
 		if (inputChannel != null) {
+			// todo: pass consumerProperties
 			bindMessageConsumer(inputChannel, getInputChannelName(module));
 		}
 		MessageChannel outputChannel = module.getComponent(MODULE_OUTPUT_CHANNEL, MessageChannel.class);
 		if (outputChannel != null) {
+			// todo: pass producerProperties
 			bindMessageProducer(outputChannel, getOutputChannelName(module));
 			createAndBindTapChannel(module, outputChannel);
 		}
