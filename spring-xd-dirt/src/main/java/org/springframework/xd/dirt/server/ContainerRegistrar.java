@@ -64,7 +64,6 @@ import org.springframework.xd.dirt.util.MapBytesUtility;
 import org.springframework.xd.dirt.zookeeper.Paths;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnectionListener;
-import org.springframework.xd.module.DeploymentMetadata;
 import org.springframework.xd.module.ModuleDefinition;
 import org.springframework.xd.module.ModuleDeploymentProperties;
 import org.springframework.xd.module.ModuleDescriptor;
@@ -514,10 +513,6 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 */
 	private Module createComposedModule(ModuleDescriptor compositeDescriptor,
 			ModuleOptions options, ModuleDeploymentProperties deploymentProperties) {
-		String streamName = compositeDescriptor.getGroup();
-		int index = compositeDescriptor.getIndex();
-		String sourceChannelName = compositeDescriptor.getSourceChannelName();
-		String sinkChannelName = compositeDescriptor.getSinkChannelName();
 
 		List<ModuleDescriptor> children = compositeDescriptor.getChildren();
 		Assert.notEmpty(children, "child module list must not be empty");
@@ -529,9 +524,7 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 			// todo: is it right to pass the composite deploymentProperties here?
 			childrenModules.add(0, createSimpleModule(childRequest, narrowedOptions, deploymentProperties));
 		}
-		DeploymentMetadata metadata = new DeploymentMetadata(streamName, index, sourceChannelName, sinkChannelName);
-		return new CompositeModule(compositeDescriptor.getModuleName(), compositeDescriptor.getType(),
-				childrenModules, metadata);
+		return new CompositeModule(compositeDescriptor, deploymentProperties, childrenModules);
 	}
 
 	/**
@@ -546,15 +539,10 @@ public class ContainerRegistrar implements ApplicationListener<ContextRefreshedE
 	 */
 	private Module createSimpleModule(ModuleDescriptor descriptor, ModuleOptions options,
 			ModuleDeploymentProperties deploymentProperties) {
-		String streamName = descriptor.getGroup();
-		int index = descriptor.getIndex();
-		String sourceChannelName = descriptor.getSourceChannelName();
-		String sinkChannelName = descriptor.getSinkChannelName();
-		DeploymentMetadata metadata = new DeploymentMetadata(streamName, index, sourceChannelName, sinkChannelName);
 		ModuleDefinition definition = descriptor.getModuleDefinition();
 		ClassLoader classLoader = (definition.getClasspath() == null) ? null
 				: new ParentLastURLClassLoader(definition.getClasspath(), parentClassLoader);
-		return new SimpleModule(definition, metadata, classLoader, options);
+		return new SimpleModule(descriptor, deploymentProperties, classLoader, options);
 	}
 
 	/**
