@@ -203,6 +203,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 			Job job = deploymentLoader.loadJob(client, jobName, this.jobFactory);
 			if (job != null) {
 				ModuleDescriptor descriptor = job.getJobModuleDescriptor();
+				// todo: read deployment properties from ZK
 				ModuleDeploymentProperties moduleDeploymentProperties = DeploymentPropertiesUtility.createModuleDeploymentProperties(
 						job.getDeploymentProperties(), descriptor);
 				if (isCandidateForDeployment(container, descriptor, moduleDeploymentProperties)) {
@@ -246,6 +247,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 			if (stream != null) {
 				for (Iterator<ModuleDescriptor> descriptorIterator = stream.getDeploymentOrderIterator(); descriptorIterator.hasNext();) {
 					ModuleDescriptor descriptor = descriptorIterator.next();
+					// todo: read deployment properties from ZK
 					ModuleDeploymentProperties moduleDeploymentProperties = DeploymentPropertiesUtility.createModuleDeploymentProperties(
 							stream.getDeploymentProperties(), descriptor);
 

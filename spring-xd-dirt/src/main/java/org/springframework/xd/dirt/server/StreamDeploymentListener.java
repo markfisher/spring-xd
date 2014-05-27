@@ -16,8 +16,12 @@
 
 package org.springframework.xd.dirt.server;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,6 +35,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.util.Assert;
 import org.springframework.xd.dirt.cluster.ContainerMatcher;
 import org.springframework.xd.dirt.cluster.ContainerRepository;
 import org.springframework.xd.dirt.core.Stream;
@@ -178,13 +183,60 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 	 * @throws Exception
 	 */
 	private void deployStream(final Stream stream) throws Exception {
+		final Map<ModuleDescriptor.Key, Integer> mapModuleCount = new HashMap<ModuleDescriptor.Key, Integer>();
+		final List<ModuleDescriptor> moduleDescriptors = new ArrayList<ModuleDescriptor>(stream.getDescriptors());
+		final Map<ModuleDescriptor.Key, ModuleDeploymentProperties> mapDeploymentProperties =
+				new HashMap<ModuleDescriptor.Key, ModuleDeploymentProperties>();
+
 		ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider provider =
 				new ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider() {
 
+					private ModuleDeploymentProperties getModuleDeploymentProperties(ModuleDescriptor moduleDescriptor) {
+						ModuleDescriptor.Key key = moduleDescriptor.createKey();
+						ModuleDeploymentProperties properties = mapDeploymentProperties.get(moduleDescriptor.createKey());
+						if (properties == null) {
+							properties = DeploymentPropertiesUtility.createModuleDeploymentProperties(
+									stream.getDeploymentProperties(), moduleDescriptor);
+							mapDeploymentProperties.put(key, properties);
+						}
+						return properties;
+					}
+
 					@Override
 					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
-						return DeploymentPropertiesUtility.createModuleDeploymentProperties(stream.getDeploymentProperties(),
-								descriptor);
+						ModuleDeploymentProperties properties = getModuleDeploymentProperties(descriptor);
+
+						int moduleIndex = descriptor.getIndex();
+						if (moduleIndex > 0) {
+							ModuleDescriptor previous = moduleDescriptors.get(moduleIndex - 1);
+							ModuleDeploymentProperties previousProperties = getModuleDeploymentProperties(previous);
+							// todo: all property keys should be constants
+							if (previousProperties.containsKey("producer.partitionKeyExpression")) {
+								ModuleDescriptor.Key moduleKey = descriptor.createKey();
+								Integer index = mapModuleCount.get(moduleKey);
+								if (index == null) {
+									index = 0;
+								}
+								properties.put("consumer.partitionIndex", String.valueOf(index++));
+								mapModuleCount.put(moduleKey, index);
+							}
+						}
+
+						if (properties.containsKey("producer.partitionKeyExpression")) {
+							// todo: if this throws IndexOutOfBoundsException,
+							// the stream is trying to partition a sink
+							ModuleDeploymentProperties nextProperties =
+									getModuleDeploymentProperties(moduleDescriptors.get(moduleIndex + 1));
+
+							String count = nextProperties.get("count");
+							Assert.hasText(count);
+							properties.put("producer.partitionCount", count);
+						}
+
+						mapDeploymentProperties.put(descriptor.createKey(), properties);
+
+						logger.warn("properties for {}: {}", descriptor, properties);
+						return properties;
 					}
 				};
 

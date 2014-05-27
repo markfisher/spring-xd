@@ -247,33 +247,34 @@ public class ModuleDeploymentWriter {
 		while (descriptors.hasNext()) {
 			ResultCollector collector = new ResultCollector();
 			ModuleDescriptor descriptor = descriptors.next();
-			for (Container container : containerMatcher.match(descriptor,
-					provider.propertiesForDescriptor(descriptor),
+			ModuleDeploymentProperties properties = provider.propertiesForDescriptor(descriptor);
+			for (Container container : containerMatcher.match(descriptor, properties,
 					wrapAsIterable(containerRepository.getContainerIterator()))) {
 				String containerName = container.getName();
-				String path = Paths.build(new ModuleDeploymentsPath()
+				String deploymentPath = new ModuleDeploymentsPath()
 						.setContainer(containerName)
 						.setStreamName(descriptor.getGroup())
 						.setModuleType(descriptor.getType().toString())
-						.setModuleLabel(descriptor.getModuleLabel()).build(), Paths.STATUS);
+						.setModuleLabel(descriptor.getModuleLabel()).build();
+				String statusPath = Paths.build(deploymentPath, Paths.STATUS);
 				collector.addPending(containerName, descriptor.createKey());
 				try {
-					ensureModuleDeploymentPath(path, descriptor, container);
+					ensureModuleDeploymentPath(deploymentPath, statusPath, descriptor, properties, container);
 
 					// set the collector as a watch; it is possible that
 					// a. that the container has already updated this node (unlikely)
 					// b. the deployment was previously written; in this case read
 					//    the status written by the container
-					byte[] data = client.getData().usingWatcher(collector).forPath(path);
+					byte[] data = client.getData().usingWatcher(collector).forPath(statusPath);
 					if (data != null && data.length > 0) {
-						collector.addResult(createResult(path, data));
+						collector.addResult(createResult(deploymentPath, data));
 					}
 				}
 				catch (InterruptedException e) {
 					throw e;
 				}
 				catch (Exception e) {
-					collector.addResult(createResult(path, e));
+					collector.addResult(createResult(deploymentPath, e));
 				}
 			}
 			// for each individual module, block until all containers
@@ -347,15 +348,21 @@ public class ModuleDeploymentWriter {
 	 * If the path already exists, the {@link org.apache.zookeeper.KeeperException.NodeExistsException}
 	 * is swallowed. All other exceptions are rethrown.
 	 *
-	 * @param path         ZooKeeper path to create for module deployment
-	 * @param descriptor   module descriptor for module to be deployed
-	 * @param container    target container for deployment
+	 * @param deploymentPath ZooKeeper path to create for module deployment
+	 * @param statusPath     ZooKeeper path for module deployment status
+	 * @param descriptor     module descriptor for module to be deployed
+	 * @param properties     module deployment properties
+	 * @param container      target container for deployment
+	 *
 	 * @throws Exception if an exception is thrown during path creation
 	 */
-	private void ensureModuleDeploymentPath(String path, ModuleDescriptor descriptor, Container container)
+	private void ensureModuleDeploymentPath(String deploymentPath, String statusPath, ModuleDescriptor descriptor,
+			ModuleDeploymentProperties properties, Container container)
 			throws Exception {
 		try {
-			zkConnection.getClient().create().creatingParentsIfNeeded().forPath(path);
+			zkConnection.getClient().inTransaction()
+					.create().forPath(deploymentPath, mapBytesUtility.toByteArray(properties)).and()
+					.create().forPath(statusPath).and().commit();
 		}
 		catch (KeeperException.NodeExistsException e) {
 			logger.info("Module {} is already deployed to container {}", descriptor, container);
