@@ -228,6 +228,39 @@ public class ModuleDeploymentWriter {
 	}
 
 	/**
+	 * Write a module deployment request for the provided module descriptor
+	 * using the provided properties. Since one module descriptor and one
+	 * instance of {@link ModuleDeploymentProperties} are provided,  it is
+	 * assumed that the provided {@link ContainerMatcher} will only return
+	 * one container. This method should be used for module redeployment
+	 * when a container exits the cluster.
+	 *
+	 * @param moduleDescriptor      descriptor for module to deploy
+	 * @param deploymentProperties  deployment properties for module
+	 * @param containerMatcher      matcher for modules to containers
+	 * @return result of request
+	 * @throws InterruptedException
+	 */
+	public Result writeDeployment(ModuleDescriptor moduleDescriptor,
+			final ModuleDeploymentProperties deploymentProperties,
+			ContainerMatcher containerMatcher) throws InterruptedException {
+		Collection<Result> results = writeDeployment(Collections.singleton(moduleDescriptor).iterator(),
+				new ModuleDeploymentPropertiesProvider() {
+					@Override
+					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
+						return deploymentProperties;
+					}
+				}, containerMatcher);
+
+		if (results.size() > 1) {
+			throw new IllegalStateException("Expected to deploy to one container; " +
+					"deployment results: " + results);
+		}
+
+		return results.iterator().next();
+	}
+
+	/**
 	 * Write module deployment requests for the modules returned by the {@code descriptors}
 	 * iterator. The target containers are indicated by the provided {@code containerMatcher}
 	 * and the {@link org.springframework.xd.module.ModuleDeploymentProperties} provided

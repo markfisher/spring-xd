@@ -39,7 +39,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.xd.dirt.cluster.Container;
 import org.springframework.xd.dirt.cluster.ContainerMatcher;
 import org.springframework.xd.dirt.cluster.ContainerRepository;
-import org.springframework.xd.dirt.cluster.ExcludingContainerMatcher;
+import org.springframework.xd.dirt.cluster.RedeploymentContainerMatcher;
 import org.springframework.xd.dirt.core.Job;
 import org.springframework.xd.dirt.core.JobDeploymentsPath;
 import org.springframework.xd.dirt.core.ModuleDeploymentsPath;
@@ -360,6 +360,15 @@ public class ContainerListener implements PathChildrenCacheListener {
 		for (String deployment : deployments) {
 			ModuleDeploymentsPath moduleDeploymentsPath =
 					new ModuleDeploymentsPath(Paths.build(containerDeployments, deployment));
+
+			// reuse the module deployment properties used to deploy
+			// this module; this may contain properties specific to
+			// the container that just departed (such as partition
+			// index in the case of partitioned streams)
+			ModuleDeploymentProperties deploymentProperties = new ModuleDeploymentProperties();
+			deploymentProperties.putAll(mapBytesUtility.toMap(
+					client.getData().forPath(moduleDeploymentsPath.build())));
+
 			String unitName = moduleDeploymentsPath.getStreamName();
 			String moduleType = moduleDeploymentsPath.getModuleType();
 			String moduleLabel = moduleDeploymentsPath.getModuleLabel();
@@ -367,7 +376,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 			if (ModuleType.job.toString().equals(moduleType)) {
 				Job job = deploymentLoader.loadJob(client, unitName, this.jobFactory);
 				if (job != null) {
-					redeployJobModule(client, job);
+					redeployJobModule(client, job, deploymentProperties);
 				}
 			}
 			else {
@@ -377,7 +386,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 					streamMap.put(unitName, stream);
 				}
 				if (stream != null) {
-					redeployStreamModule(client, stream, moduleType, moduleLabel);
+					redeployStreamModule(client, stream, moduleType, moduleLabel, deploymentProperties);
 				}
 			}
 		}
@@ -396,33 +405,23 @@ public class ContainerListener implements PathChildrenCacheListener {
 	 * 		<li>there is a container that can deploy the stream module</li>
 	 * </ul>
 	 *
-	 * @param stream stream for module
-	 * @param moduleType module type
-	 * @param moduleLabel module label
+	 * @param stream                stream for module
+	 * @param moduleType            module type
+	 * @param moduleLabel           module label
+	 * @param deploymentProperties  deployment properties for stream module
 	 * @throws InterruptedException
 	 */
 	private void redeployStreamModule(CuratorFramework client, final Stream stream, String moduleType,
-			String moduleLabel) throws Exception {
+			String moduleLabel, ModuleDeploymentProperties deploymentProperties) throws Exception {
 		ModuleDescriptor moduleDescriptor = stream.getModuleDescriptor(moduleLabel, moduleType);
-		ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider provider =
-				new ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider() {
-
-					@Override
-					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
-						return DeploymentPropertiesUtility.createModuleDeploymentProperties(
-								stream.getDeploymentProperties(), descriptor);
-					}
-				};
-
-		ModuleDeploymentProperties moduleDeploymentProperties = provider.propertiesForDescriptor(moduleDescriptor);
-		if (moduleDeploymentProperties.getCount() > 0) {
-			Collection<ModuleDeploymentWriter.Result> results = moduleDeploymentWriter.writeDeployment(
-					Collections.singleton(moduleDescriptor).iterator(), provider,
+		if (deploymentProperties.getCount() > 0) {
+			ModuleDeploymentWriter.Result result = moduleDeploymentWriter.writeDeployment(
+					moduleDescriptor, deploymentProperties,
 					instantiateContainerMatcher(client, moduleDescriptor));
-			moduleDeploymentWriter.validateResults(results);
+			moduleDeploymentWriter.validateResult(result);
 		}
 		else {
-			logUnwantedRedeployment(moduleDeploymentProperties.getCriteria(), moduleDescriptor.getModuleLabel());
+			logUnwantedRedeployment(deploymentProperties.getCriteria(), moduleDescriptor.getModuleLabel());
 		}
 	}
 
@@ -434,31 +433,22 @@ public class ContainerListener implements PathChildrenCacheListener {
 	 * 		<li>there is a container that can deploy the job</li>
 	 * </ul>
 	 *
-	 * @param client curator client
-	 * @param job job instance to redeploy
+	 * @param client               curator client
+	 * @param job                  job instance to redeploy
+	 * @param deploymentProperties deployment properties for job module
 	 * @throws Exception
 	 */
-	private void redeployJobModule(CuratorFramework client, final Job job) throws Exception {
+	private void redeployJobModule(CuratorFramework client, final Job job,
+			ModuleDeploymentProperties deploymentProperties) throws Exception {
 		ModuleDescriptor moduleDescriptor = job.getJobModuleDescriptor();
-		ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider provider =
-				new ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider() {
-
-					@Override
-					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
-						return DeploymentPropertiesUtility.createModuleDeploymentProperties(
-								job.getDeploymentProperties(), descriptor);
-					}
-				};
-
-		ModuleDeploymentProperties moduleDeploymentProperties = provider.propertiesForDescriptor(moduleDescriptor);
-		if (moduleDeploymentProperties.getCount() > 0) {
-			Collection<ModuleDeploymentWriter.Result> results = moduleDeploymentWriter.writeDeployment(
-					Collections.singleton(moduleDescriptor).iterator(), provider,
+		if (deploymentProperties.getCount() > 0) {
+			ModuleDeploymentWriter.Result result = moduleDeploymentWriter.writeDeployment(
+					moduleDescriptor, deploymentProperties,
 					instantiateContainerMatcher(client, moduleDescriptor));
-			moduleDeploymentWriter.validateResults(results);
+			moduleDeploymentWriter.validateResult(result);
 		}
 		else {
-			logUnwantedRedeployment(moduleDeploymentProperties.getCriteria(), moduleDescriptor.getModuleLabel());
+			logUnwantedRedeployment(deploymentProperties.getCriteria(), moduleDescriptor.getModuleLabel());
 		}
 	}
 
@@ -480,7 +470,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 				? getContainersForJobModule(client, moduleDescriptor)
 				: getContainersForStreamModule(client, moduleDescriptor);
 
-		return new ExcludingContainerMatcher(containerMatcher, containers);
+		return new RedeploymentContainerMatcher(containerMatcher, containers);
 	}
 
 	/**
