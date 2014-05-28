@@ -129,8 +129,7 @@ public class JobDeploymentListener implements PathChildrenCacheListener {
 					new ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider() {
 
 						@Override
-						public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor,
-								boolean includeInstanceSpecificProperties) {
+						public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
 							return DeploymentPropertiesUtility.createModuleDeploymentProperties(
 									job.getDeploymentProperties(),
 									descriptor);

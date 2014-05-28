@@ -408,14 +408,13 @@ public class ContainerListener implements PathChildrenCacheListener {
 				new ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider() {
 
 					@Override
-					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor,
-							boolean includeInstanceSpecificProperties) {
+					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
 						return DeploymentPropertiesUtility.createModuleDeploymentProperties(
 								stream.getDeploymentProperties(), descriptor);
 					}
 				};
-		ModuleDeploymentProperties moduleDeploymentProperties = provider.propertiesForDescriptor(moduleDescriptor,
-				false);
+
+		ModuleDeploymentProperties moduleDeploymentProperties = provider.propertiesForDescriptor(moduleDescriptor);
 		if (moduleDeploymentProperties.getCount() > 0) {
 			Collection<ModuleDeploymentWriter.Result> results = moduleDeploymentWriter.writeDeployment(
 					Collections.singleton(moduleDescriptor).iterator(), provider,
@@ -445,14 +444,13 @@ public class ContainerListener implements PathChildrenCacheListener {
 				new ModuleDeploymentWriter.ModuleDeploymentPropertiesProvider() {
 
 					@Override
-					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor,
-							boolean includeInstanceSpecificProperties) {
+					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
 						return DeploymentPropertiesUtility.createModuleDeploymentProperties(
 								job.getDeploymentProperties(), descriptor);
 					}
 				};
-		ModuleDeploymentProperties moduleDeploymentProperties = provider.propertiesForDescriptor(moduleDescriptor,
-				false);
+
+		ModuleDeploymentProperties moduleDeploymentProperties = provider.propertiesForDescriptor(moduleDescriptor);
 		if (moduleDeploymentProperties.getCount() > 0) {
 			Collection<ModuleDeploymentWriter.Result> results = moduleDeploymentWriter.writeDeployment(
 					Collections.singleton(moduleDescriptor).iterator(), provider,

@@ -104,8 +104,7 @@ public class ModuleDeploymentWriter {
 	private static final ModuleDeploymentPropertiesProvider defaultProvider = new ModuleDeploymentPropertiesProvider() {
 
 		@Override
-		public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor,
-				boolean includeInstanceSpecificProperties) {
+		public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
 			return ModuleDeploymentProperties.defaultInstance;
 		}
 	};
@@ -248,8 +247,8 @@ public class ModuleDeploymentWriter {
 		while (descriptors.hasNext()) {
 			ResultCollector collector = new ResultCollector();
 			ModuleDescriptor descriptor = descriptors.next();
-			ModuleDeploymentProperties sharedProperties = provider.propertiesForDescriptor(descriptor, false);
-			for (Container container : containerMatcher.match(descriptor, sharedProperties,
+			ModuleDeploymentProperties deploymentProperties = provider.propertiesForDescriptor(descriptor);
+			for (Container container : containerMatcher.match(descriptor, deploymentProperties,
 					wrapAsIterable(containerRepository.getContainerIterator()))) {
 				String containerName = container.getName();
 				String deploymentPath = new ModuleDeploymentsPath()
@@ -260,9 +259,13 @@ public class ModuleDeploymentWriter {
 				String statusPath = Paths.build(deploymentPath, Paths.STATUS);
 				collector.addPending(containerName, descriptor.createKey());
 				try {
-					// todo: obviously we need to do this better... not repeating the whole thing but separating for shared vs. instance-specific in some way
-					ModuleDeploymentProperties instanceProperties = provider.propertiesForDescriptor(descriptor, true);
-					ensureModuleDeploymentPath(deploymentPath, statusPath, descriptor, instanceProperties, container);
+					if (provider instanceof ContainerAwareModuleDeploymentPropertiesProvider) {
+						deploymentProperties.putAll(((ContainerAwareModuleDeploymentPropertiesProvider) provider)
+								.propertiesForDescriptor(descriptor, container));
+					}
+
+					ensureModuleDeploymentPath(deploymentPath, statusPath, descriptor,
+							deploymentProperties, container);
 
 					// set the collector as a watch; it is possible that
 					// a. that the container has already updated this node (unlikely)
@@ -741,9 +744,10 @@ public class ModuleDeploymentWriter {
 		}
 	}
 
+
 	/**
-	 * Callback interface to obtain {@link org.springframework.xd.module.ModuleDeploymentProperties}
-	 * for a {@link org.springframework.xd.module.ModuleDescriptor}.
+	 * Callback interface to obtain {@link ModuleDeploymentProperties}
+	 * for a {@link ModuleDescriptor}.
 	 */
 	public interface ModuleDeploymentPropertiesProvider {
 
@@ -753,8 +757,27 @@ public class ModuleDeploymentWriter {
 		 * @param descriptor module descriptor for module to be deployed
 		 * @return deployment properties for module
 		 */
+		ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor);
+	}
+
+	/**
+	 * Callback interface to obtain {@link ModuleDeploymentProperties}
+	 * for a {@link ModuleDescriptor} within the context of deployment
+	 * to the provided {@link Container}.
+	 */
+	public interface ContainerAwareModuleDeploymentPropertiesProvider
+			extends ModuleDeploymentPropertiesProvider {
+
+		/**
+		 * Return the deployment properties for the module descriptor
+		 * that are specific for deployment to the provided {@link Container}.
+		 *
+		 * @param descriptor module descriptor for module to be deployed
+		 * @param container  target container for deployment
+		 * @return deployment properties for module
+		 */
 		ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor,
-				boolean includeInstanceSpecificProperties);
+				Container container);
 	}
 
 }
