@@ -104,7 +104,8 @@ public class ModuleDeploymentWriter {
 	private static final ModuleDeploymentPropertiesProvider defaultProvider = new ModuleDeploymentPropertiesProvider() {
 
 		@Override
-		public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
+		public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor,
+				boolean includeInstanceSpecificProperties) {
 			return ModuleDeploymentProperties.defaultInstance;
 		}
 	};
@@ -247,8 +248,8 @@ public class ModuleDeploymentWriter {
 		while (descriptors.hasNext()) {
 			ResultCollector collector = new ResultCollector();
 			ModuleDescriptor descriptor = descriptors.next();
-			ModuleDeploymentProperties properties = provider.propertiesForDescriptor(descriptor);
-			for (Container container : containerMatcher.match(descriptor, properties,
+			ModuleDeploymentProperties sharedProperties = provider.propertiesForDescriptor(descriptor, false);
+			for (Container container : containerMatcher.match(descriptor, sharedProperties,
 					wrapAsIterable(containerRepository.getContainerIterator()))) {
 				String containerName = container.getName();
 				String deploymentPath = new ModuleDeploymentsPath()
@@ -259,7 +260,9 @@ public class ModuleDeploymentWriter {
 				String statusPath = Paths.build(deploymentPath, Paths.STATUS);
 				collector.addPending(containerName, descriptor.createKey());
 				try {
-					ensureModuleDeploymentPath(deploymentPath, statusPath, descriptor, properties, container);
+					// todo: obviously we need to do this better... not repeating the whole thing but separating for shared vs. instance-specific in some way
+					ModuleDeploymentProperties instanceProperties = provider.propertiesForDescriptor(descriptor, true);
+					ensureModuleDeploymentPath(deploymentPath, statusPath, descriptor, instanceProperties, container);
 
 					// set the collector as a watch; it is possible that
 					// a. that the container has already updated this node (unlikely)
@@ -336,6 +339,7 @@ public class ModuleDeploymentWriter {
 	 */
 	private Iterable<Container> wrapAsIterable(final Iterator<Container> containers) {
 		return new Iterable<Container>() {
+
 			@Override
 			public Iterator<Container> iterator() {
 				return containers;
@@ -749,7 +753,8 @@ public class ModuleDeploymentWriter {
 		 * @param descriptor module descriptor for module to be deployed
 		 * @return deployment properties for module
 		 */
-		ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor);
+		ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor,
+				boolean includeInstanceSpecificProperties);
 	}
 
 }

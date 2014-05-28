@@ -203,8 +203,12 @@ public class StreamDeploymentListener implements PathChildrenCacheListener {
 					}
 
 					@Override
-					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
+					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor,
+							boolean includeInstanceSpecificProperties) {
 						ModuleDeploymentProperties properties = getModuleDeploymentProperties(descriptor);
+						if (!includeInstanceSpecificProperties) {
+							return properties;
+						}
 
 						int moduleIndex = descriptor.getIndex();
 						if (moduleIndex > 0) {
