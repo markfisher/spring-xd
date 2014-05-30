@@ -246,6 +246,7 @@ public class ModuleDeploymentWriter {
 			ContainerMatcher containerMatcher) throws InterruptedException {
 		Collection<Result> results = writeDeployment(Collections.singleton(moduleDescriptor).iterator(),
 				new ModuleDeploymentPropertiesProvider() {
+
 					@Override
 					public ModuleDeploymentProperties propertiesForDescriptor(ModuleDescriptor descriptor) {
 						return deploymentProperties;
@@ -257,7 +258,7 @@ public class ModuleDeploymentWriter {
 					"deployment results: " + results);
 		}
 
-		return results.iterator().next();
+		return results.size() > 0 ? results.iterator().next() : null;
 	}
 
 	/**

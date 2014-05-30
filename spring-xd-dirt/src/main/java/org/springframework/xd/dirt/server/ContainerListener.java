@@ -432,7 +432,9 @@ public class ContainerListener implements PathChildrenCacheListener {
 			ModuleDeploymentWriter.Result result = moduleDeploymentWriter.writeDeployment(
 					moduleDescriptor, deploymentProperties,
 					instantiateContainerMatcher(client, moduleDescriptor));
-			moduleDeploymentWriter.validateResult(result);
+			if (result != null) {
+				moduleDeploymentWriter.validateResult(result);
+			}
 		}
 		else {
 			logUnwantedRedeployment(deploymentProperties.getCriteria(), moduleDescriptor.getModuleLabel());
@@ -459,7 +461,9 @@ public class ContainerListener implements PathChildrenCacheListener {
 			ModuleDeploymentWriter.Result result = moduleDeploymentWriter.writeDeployment(
 					moduleDescriptor, deploymentProperties,
 					instantiateContainerMatcher(client, moduleDescriptor));
-			moduleDeploymentWriter.validateResult(result);
+			if (result != null) {
+				moduleDeploymentWriter.validateResult(result);
+			}
 		}
 		else {
 			logUnwantedRedeployment(deploymentProperties.getCriteria(), moduleDescriptor.getModuleLabel());
