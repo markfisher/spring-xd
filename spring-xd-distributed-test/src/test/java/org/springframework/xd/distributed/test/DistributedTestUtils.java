@@ -50,44 +50,37 @@ import org.springframework.xd.rest.client.domain.ContainerAttributesResource;
 import org.springframework.xd.rest.client.impl.SpringXDTemplate;
 
 /**
+ * Collection of utilities for starting external processes required
+ * for a distributed XD system.
+ *
  * @author Patrick Peralta
  */
 public class DistributedTestUtils {
-	private static final Logger logger = LoggerFactory.getLogger(DistributedTestUtils.class);
-
-	public static final int ZOOKEEPER_PORT = 3181;
-
-	public static final String ADMIN_URL = "http://localhost:9393";
 
 	/**
-	 * Launch the given class's {@code main} method in a separate JVM.
-	 *
-	 * @param clz class to launch
-	 * @param args command line arguments
-	 * todo
-	 * @return launched application
-	 *
-	 * @throws IOException
+	 * Logger.
 	 */
-	private static JavaApplication<SimpleJavaApplication> launch(Class<?> clz,
-			boolean remoteDebug, Properties systemProperties, List<String> args) throws IOException {
-		String classpath = System.getProperty("java.class.path");
-		SimpleJavaApplicationSchema schema = new SimpleJavaApplicationSchema(clz.getName(), classpath);
-		if (args != null) {
-			for (String arg : args) {
-				schema.addArgument(arg);
-			}
-		}
-		if (systemProperties != null) {
-			schema.setSystemProperties(new PropertiesBuilder(systemProperties));
-		}
+	private static final Logger logger = LoggerFactory.getLogger(DistributedTestUtils.class);
 
-		NativeJavaApplicationBuilder<SimpleJavaApplication, SimpleJavaApplicationSchema> builder =
-				new NativeJavaApplicationBuilder<SimpleJavaApplication, SimpleJavaApplicationSchema>();
-		builder.setRemoteDebuggingEnabled(remoteDebug);
-		return builder.realize(schema, clz.getName(), new SystemApplicationConsole());
-	}
+	/**
+	 * Port for ZooKeeper server.
+	 */
+	public static final int ZOOKEEPER_PORT = 3181;
 
+	/**
+	 * Admin server URL.
+	 */
+	public static final String ADMIN_URL = "http://localhost:9393";
+
+
+	/**
+	 * Start an instance of ZooKeeper. Upon test completion, the method
+	 * {@link org.apache.curator.test.TestingServer#stop()} should be invoked
+	 * to shut down the server.
+	 *
+	 * @return ZooKeeper testing server
+	 * @throws Exception
+	 */
 	public static TestingServer startZooKeeper() throws Exception {
 		return new TestingServer(new InstanceSpec(
 				null,             // dataDirectory
@@ -100,6 +93,16 @@ public class DistributedTestUtils {
 				-1));             // maxClientCnxns
 	}
 
+	/**
+	 * Start an instance of the admin server. This method will block until
+	 * the admin server is capable of processing HTTP requests. Upon test
+	 * completion, the method {@link com.oracle.tools.runtime.java.JavaApplication#close()}
+	 * should be invoked to shut down the server.
+	 *
+	 * @return admin server application reference
+	 * @throws IOException            if an exception is thrown launching the process
+	 * @throws InterruptedException   if the executing thread is interrupted
+	 */
 	public static JavaApplication<SimpleJavaApplication> startAdmin() throws IOException, InterruptedException {
 		JavaApplication<SimpleJavaApplication> adminServer;
 
@@ -114,19 +117,54 @@ public class DistributedTestUtils {
 		return adminServer;
 	}
 
-	public static JavaApplication<SimpleJavaApplication> startContainer() throws IOException, InterruptedException {
+	/**
+	 * Start a container instance.  Upon test completion, the method
+	 * {@link com.oracle.tools.runtime.java.JavaApplication#close()}
+	 * should be invoked to shut down the server. This method may also be
+	 * invoked as part of failover testing.
+	 * <p />
+	 * Note that this method returns immediately. In order to verify
+	 * that the container was started, invoke {@link #waitForContainers}
+	 * to block until the container(s) are started.
+	 *
+	 * @return container server application reference
+	 * @throws IOException if an exception is thrown launching the process
+	 *
+	 * @see #waitForContainers
+	 */
+	public static JavaApplication<SimpleJavaApplication> startContainer() throws IOException {
 		Properties systemProperties = new Properties();
 		systemProperties.setProperty("zk.client.connect", "localhost:" + ZOOKEEPER_PORT);
 
 		return launch(ContainerServerApplication.class, false, systemProperties, null);
 	}
 
-	public static JavaApplication<SimpleJavaApplication> startHsql() throws IOException, InterruptedException {
+	/**
+	 * Start an instance of HSQL. Upon test completion, the method
+	 * {@link com.oracle.tools.runtime.java.JavaApplication#close()}
+	 * should be invoked to shut down the server.
+	 *
+	 * @return HSQL server application reference
+	 * @throws IOException if an exception is thrown launching the process
+	 */
+	public static JavaApplication<SimpleJavaApplication> startHsql() throws IOException {
 		return launch(HsqlServerApplication.class, false, null, null);
 	}
 
-
-	public static Map<Long, String> waitForContainers(SpringXDTemplate template, Set<Long> pids) throws InterruptedException {
+	/**
+	 * Block the executing thread until all of the indicated process IDs
+	 * have been identified in the list of runtime containers as indicated
+	 * by the admin server.
+	 *
+	 * @param template REST template used to communicate with the admin server
+	 * @param pids     set of process IDs for the expected containers
+	 * @return map of process id to container id
+	 * @throws InterruptedException            if the executing thread is interrupted
+	 * @throws java.lang.IllegalStateException if the number of containers identified
+	 *         does not match the number of PIDs provided
+	 */
+	public static Map<Long, String> waitForContainers(SpringXDTemplate template,
+			Set<Long> pids) throws InterruptedException, IllegalStateException {
 		int pidCount = pids.size();
 		Map<Long, String> mapPidUuid = new HashMap<>();
 		long expiry = System.currentTimeMillis() + 30000;
@@ -154,7 +192,16 @@ public class DistributedTestUtils {
 		return mapPidUuid;
 	}
 
-	private static void waitForAdminServer(String url) throws InterruptedException {
+	/**
+	 * Block the executing thread until the admin server is responding to
+	 * HTTP requests.
+	 *
+	 * @param url URL for admin server
+	 * @throws InterruptedException            if the executing thread is interrupted
+	 * @throws java.lang.IllegalStateException if a successful connection to the
+	 *         admin server was not established
+	 */
+	private static void waitForAdminServer(String url) throws InterruptedException, IllegalStateException {
 		boolean connected = false;
 		Exception exception = null;
 		int httpStatus = 0;
@@ -197,6 +244,36 @@ public class DistributedTestUtils {
 			}
 			throw new IllegalStateException(builder.toString());
 		}
+	}
+
+	/**
+	 * Launch the given class's {@code main} method in a separate JVM.
+	 *
+	 * @param clz               class to launch
+	 * @param remoteDebug       if true, enable remote debugging
+	 * @param systemProperties  system properties for new process
+	 * @param args              command line arguments
+	 * @return launched application
+	 *
+	 * @throws IOException if an exception was thrown launching the process
+	 */
+	private static JavaApplication<SimpleJavaApplication> launch(Class<?> clz,
+			boolean remoteDebug, Properties systemProperties, List<String> args) throws IOException {
+		String classpath = System.getProperty("java.class.path");
+		SimpleJavaApplicationSchema schema = new SimpleJavaApplicationSchema(clz.getName(), classpath);
+		if (args != null) {
+			for (String arg : args) {
+				schema.addArgument(arg);
+			}
+		}
+		if (systemProperties != null) {
+			schema.setSystemProperties(new PropertiesBuilder(systemProperties));
+		}
+
+		NativeJavaApplicationBuilder<SimpleJavaApplication, SimpleJavaApplicationSchema> builder =
+				new NativeJavaApplicationBuilder<SimpleJavaApplication, SimpleJavaApplicationSchema>();
+		builder.setRemoteDebuggingEnabled(remoteDebug);
+		return builder.realize(schema, clz.getName(), new SystemApplicationConsole());
 	}
 
 }
