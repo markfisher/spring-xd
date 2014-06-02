@@ -22,8 +22,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import com.oracle.tools.runtime.PropertiesBuilder;
 import com.oracle.tools.runtime.console.SystemApplicationConsole;
@@ -45,6 +48,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.hateoas.PagedResources;
 import org.springframework.xd.batch.hsqldb.server.HsqlServerApplication;
 import org.springframework.xd.dirt.server.AdminServerApplication;
+import org.springframework.xd.dirt.server.ContainerServerApplication;
+import org.springframework.xd.rest.client.domain.ContainerAttributesResource;
 import org.springframework.xd.rest.client.domain.StreamDefinitionResource;
 import org.springframework.xd.rest.client.impl.SpringXDTemplate;
 
@@ -107,10 +112,17 @@ public class HelloWorldTest {
 
 		adminServer = launch(AdminServerApplication.class, false, systemProperties, null);
 		logger.debug("waiting for admin server");
-		waitForServer(ADMIN_URL);
+		waitForAdminServer(ADMIN_URL);
 		logger.debug("admin server ready");
 
 		return adminServer;
+	}
+
+	public JavaApplication<SimpleJavaApplication> startContainer() throws IOException, InterruptedException {
+		Properties systemProperties = new Properties();
+		systemProperties.setProperty("zk.client.connect", "localhost:" + ZOOKEEPER_PORT);
+
+		return launch(ContainerServerApplication.class, false, systemProperties, null);
 	}
 
 	public JavaApplication<SimpleJavaApplication> startHsql() throws IOException, InterruptedException {
@@ -122,14 +134,19 @@ public class HelloWorldTest {
 		JavaApplication<SimpleJavaApplication> hsqlServer = null;
 		TestingServer zooKeeper = startZooKeeper();
 		JavaApplication<SimpleJavaApplication> adminServer = null;
+		JavaApplication<SimpleJavaApplication> containerServer = null;
 
 		try {
 			hsqlServer = startHsql();
 			adminServer = startAdmin();
+			containerServer = startContainer();
 
 			SpringXDTemplate template = new SpringXDTemplate(new URI(ADMIN_URL));
-			template.streamOperations().createStream("distributed-ticktock", "time|log", false);
+			logger.warn("Waiting for container...");
+			waitForContainers(template, Collections.singleton(containerServer.getId()));
+			logger.warn("Container running");
 
+			template.streamOperations().createStream("distributed-ticktock", "time|log", false);
 			PagedResources<StreamDefinitionResource> list = template.streamOperations().list();
 			for (StreamDefinitionResource resource : list) {
 				logger.info(resource.toString());
@@ -143,12 +160,35 @@ public class HelloWorldTest {
 			if (adminServer != null) {
 				adminServer.close();
 			}
+			if (containerServer != null) {
+				containerServer.close();
+			}
 			zooKeeper.stop();
 		}
 
 	}
 
-	private static void waitForServer(String url) throws InterruptedException {
+	private void waitForContainers(SpringXDTemplate template, Set<Long> pids) throws InterruptedException {
+		Set<Long> missingPids = new HashSet<Long>(pids);
+		long expiry = System.currentTimeMillis() + 30000;
+
+		while (!missingPids.isEmpty() && System.currentTimeMillis() < expiry) {
+			Thread.sleep(500);
+			PagedResources<ContainerAttributesResource> containers =
+					template.runtimeOperations().listRuntimeContainers();
+			for (ContainerAttributesResource container : containers) {
+				logger.trace("Container: {}", container);
+				missingPids.remove(Long.parseLong(container.getAttribute("pid")));
+			}
+		}
+
+		if (!missingPids.isEmpty()) {
+			throw new IllegalStateException("Admin did not find the following container PIDs: " + missingPids);
+		}
+
+	}
+
+	private static void waitForAdminServer(String url) throws InterruptedException {
 		boolean connected = false;
 		Exception exception = null;
 		int httpStatus = 0;
