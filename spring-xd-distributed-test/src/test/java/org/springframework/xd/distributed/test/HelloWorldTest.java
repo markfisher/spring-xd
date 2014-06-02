@@ -34,7 +34,6 @@ import com.oracle.tools.runtime.java.SimpleJavaApplicationSchema;
 
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
-import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -44,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.hateoas.PagedResources;
+import org.springframework.xd.batch.hsqldb.server.HsqlServerApplication;
 import org.springframework.xd.dirt.server.AdminServerApplication;
 import org.springframework.xd.rest.client.domain.StreamDefinitionResource;
 import org.springframework.xd.rest.client.impl.SpringXDTemplate;
@@ -113,14 +113,18 @@ public class HelloWorldTest {
 		return adminServer;
 	}
 
+	public JavaApplication<SimpleJavaApplication> startHsql() throws IOException, InterruptedException {
+		return launch(HsqlServerApplication.class, false, null, null);
+	}
+
 	@Test
 	public void testServers() throws Exception {
-		// TODO: start up HSQL
+		JavaApplication<SimpleJavaApplication> hsqlServer = null;
 		TestingServer zooKeeper = startZooKeeper();
-
 		JavaApplication<SimpleJavaApplication> adminServer = null;
 
 		try {
+			hsqlServer = startHsql();
 			adminServer = startAdmin();
 
 			SpringXDTemplate template = new SpringXDTemplate(new URI(ADMIN_URL));
@@ -133,6 +137,9 @@ public class HelloWorldTest {
 			}
 		}
 		finally {
+			if (hsqlServer != null) {
+				hsqlServer.close();
+			}
 			if (adminServer != null) {
 				adminServer.close();
 			}
