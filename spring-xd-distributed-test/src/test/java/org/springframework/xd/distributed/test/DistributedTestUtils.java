@@ -16,15 +16,13 @@
 
 package org.springframework.xd.distributed.test;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URI;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -41,7 +39,6 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,14 +47,13 @@ import org.springframework.xd.batch.hsqldb.server.HsqlServerApplication;
 import org.springframework.xd.dirt.server.AdminServerApplication;
 import org.springframework.xd.dirt.server.ContainerServerApplication;
 import org.springframework.xd.rest.client.domain.ContainerAttributesResource;
-import org.springframework.xd.rest.client.domain.StreamDefinitionResource;
 import org.springframework.xd.rest.client.impl.SpringXDTemplate;
 
 /**
  * @author Patrick Peralta
  */
-public class HelloWorldTest {
-	private static final Logger logger = LoggerFactory.getLogger(HelloWorldTest.class);
+public class DistributedTestUtils {
+	private static final Logger logger = LoggerFactory.getLogger(DistributedTestUtils.class);
 
 	public static final int ZOOKEEPER_PORT = 3181;
 
@@ -68,12 +64,12 @@ public class HelloWorldTest {
 	 *
 	 * @param clz class to launch
 	 * @param args command line arguments
-	 *
+	 * todo
 	 * @return launched application
 	 *
 	 * @throws IOException
 	 */
-	protected JavaApplication<SimpleJavaApplication> launch(Class<?> clz,
+	private static JavaApplication<SimpleJavaApplication> launch(Class<?> clz,
 			boolean remoteDebug, Properties systemProperties, List<String> args) throws IOException {
 		String classpath = System.getProperty("java.class.path");
 		SimpleJavaApplicationSchema schema = new SimpleJavaApplicationSchema(clz.getName(), classpath);
@@ -92,7 +88,7 @@ public class HelloWorldTest {
 		return builder.realize(schema, clz.getName(), new SystemApplicationConsole());
 	}
 
-	public TestingServer startZooKeeper() throws Exception {
+	public static TestingServer startZooKeeper() throws Exception {
 		return new TestingServer(new InstanceSpec(
 				null,             // dataDirectory
 				ZOOKEEPER_PORT,   // port
@@ -104,7 +100,7 @@ public class HelloWorldTest {
 				-1));             // maxClientCnxns
 	}
 
-	public JavaApplication<SimpleJavaApplication> startAdmin() throws IOException, InterruptedException {
+	public static JavaApplication<SimpleJavaApplication> startAdmin() throws IOException, InterruptedException {
 		JavaApplication<SimpleJavaApplication> adminServer;
 
 		Properties systemProperties = new Properties();
@@ -118,74 +114,44 @@ public class HelloWorldTest {
 		return adminServer;
 	}
 
-	public JavaApplication<SimpleJavaApplication> startContainer() throws IOException, InterruptedException {
+	public static JavaApplication<SimpleJavaApplication> startContainer() throws IOException, InterruptedException {
 		Properties systemProperties = new Properties();
 		systemProperties.setProperty("zk.client.connect", "localhost:" + ZOOKEEPER_PORT);
 
 		return launch(ContainerServerApplication.class, false, systemProperties, null);
 	}
 
-	public JavaApplication<SimpleJavaApplication> startHsql() throws IOException, InterruptedException {
+	public static JavaApplication<SimpleJavaApplication> startHsql() throws IOException, InterruptedException {
 		return launch(HsqlServerApplication.class, false, null, null);
 	}
 
-	@Test
-	public void testServers() throws Exception {
-		JavaApplication<SimpleJavaApplication> hsqlServer = null;
-		TestingServer zooKeeper = startZooKeeper();
-		JavaApplication<SimpleJavaApplication> adminServer = null;
-		JavaApplication<SimpleJavaApplication> containerServer = null;
 
-		try {
-			hsqlServer = startHsql();
-			adminServer = startAdmin();
-			containerServer = startContainer();
-
-			SpringXDTemplate template = new SpringXDTemplate(new URI(ADMIN_URL));
-			logger.warn("Waiting for container...");
-			waitForContainers(template, Collections.singleton(containerServer.getId()));
-			logger.warn("Container running");
-
-			template.streamOperations().createStream("distributed-ticktock", "time|log", false);
-			PagedResources<StreamDefinitionResource> list = template.streamOperations().list();
-			for (StreamDefinitionResource resource : list) {
-				logger.info(resource.toString());
-				assertEquals("distributed-ticktock", resource.getName());
-			}
-		}
-		finally {
-			if (hsqlServer != null) {
-				hsqlServer.close();
-			}
-			if (adminServer != null) {
-				adminServer.close();
-			}
-			if (containerServer != null) {
-				containerServer.close();
-			}
-			zooKeeper.stop();
-		}
-
-	}
-
-	private void waitForContainers(SpringXDTemplate template, Set<Long> pids) throws InterruptedException {
-		Set<Long> missingPids = new HashSet<Long>(pids);
+	public static Map<Long, String> waitForContainers(SpringXDTemplate template, Set<Long> pids) throws InterruptedException {
+		int pidCount = pids.size();
+		Map<Long, String> mapPidUuid = new HashMap<>();
 		long expiry = System.currentTimeMillis() + 30000;
 
-		while (!missingPids.isEmpty() && System.currentTimeMillis() < expiry) {
+		while (mapPidUuid.size() != pidCount && System.currentTimeMillis() < expiry) {
 			Thread.sleep(500);
 			PagedResources<ContainerAttributesResource> containers =
 					template.runtimeOperations().listRuntimeContainers();
 			for (ContainerAttributesResource container : containers) {
 				logger.trace("Container: {}", container);
-				missingPids.remove(Long.parseLong(container.getAttribute("pid")));
+				long pid = Long.parseLong(container.getAttribute("pid"));
+				if (!mapPidUuid.containsKey(pid)) {
+					mapPidUuid.put(pid, container.getAttribute("id"));
+				}
 			}
 		}
 
-		if (!missingPids.isEmpty()) {
-			throw new IllegalStateException("Admin did not find the following container PIDs: " + missingPids);
+		if (mapPidUuid.size() != pidCount) {
+			Set<Long> missingPids = new HashSet<>(pids);
+			missingPids.removeAll(mapPidUuid.keySet());
+			throw new IllegalStateException("Admin did not find the following container PIDs: " +
+					missingPids);
 		}
 
+		return mapPidUuid;
 	}
 
 	private static void waitForAdminServer(String url) throws InterruptedException {
