@@ -19,12 +19,11 @@ package org.springframework.xd.distributed.test;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URI;
+import java.util.List;
 import java.util.Properties;
-
-import javax.net.SocketFactory;
 
 import com.oracle.tools.runtime.PropertiesBuilder;
 import com.oracle.tools.runtime.console.SystemApplicationConsole;
@@ -35,6 +34,11 @@ import com.oracle.tools.runtime.java.SimpleJavaApplicationSchema;
 
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +56,8 @@ public class HelloWorldTest {
 
 	public static final int ZOOKEEPER_PORT = 3181;
 
+	public static final String ADMIN_URL = "http://localhost:9393";
+
 	/**
 	 * Launch the given class's {@code main} method in a separate JVM.
 	 *
@@ -62,7 +68,8 @@ public class HelloWorldTest {
 	 *
 	 * @throws IOException
 	 */
-	protected JavaApplication<SimpleJavaApplication> launch(Class<?> clz, boolean remoteDebug, Properties systemProperties, String... args) throws IOException {
+	protected JavaApplication<SimpleJavaApplication> launch(Class<?> clz,
+			boolean remoteDebug, Properties systemProperties, List<String> args) throws IOException {
 		String classpath = System.getProperty("java.class.path");
 		SimpleJavaApplicationSchema schema = new SimpleJavaApplicationSchema(clz.getName(), classpath);
 		if (args != null) {
@@ -80,9 +87,8 @@ public class HelloWorldTest {
 		return builder.realize(schema, clz.getName(), new SystemApplicationConsole());
 	}
 
-	@Test
-	public void testServers() throws Exception {
-		TestingServer zooKeeper = new TestingServer(new InstanceSpec(
+	public TestingServer startZooKeeper() throws Exception {
+		return new TestingServer(new InstanceSpec(
 				null,             // dataDirectory
 				ZOOKEEPER_PORT,   // port
 				-1,               // electionPort
@@ -91,20 +97,33 @@ public class HelloWorldTest {
 				-1,               // serverId
 				500,              // tickTime
 				-1));             // maxClientCnxns
+	}
 
-		JavaApplication<SimpleJavaApplication> adminServer = null;
+	public JavaApplication<SimpleJavaApplication> startAdmin() throws IOException, InterruptedException {
+		JavaApplication<SimpleJavaApplication> adminServer;
+
 		Properties systemProperties = new Properties();
 		systemProperties.setProperty("zk.client.connect", "localhost:" + ZOOKEEPER_PORT);
 
+		adminServer = launch(AdminServerApplication.class, false, systemProperties, null);
+		logger.debug("waiting for admin server");
+		waitForServer(ADMIN_URL);
+		logger.debug("admin server ready");
+
+		return adminServer;
+	}
+
+	@Test
+	public void testServers() throws Exception {
+		// TODO: start up HSQL
+		TestingServer zooKeeper = startZooKeeper();
+
+		JavaApplication<SimpleJavaApplication> adminServer = null;
+
 		try {
-			adminServer = launch(AdminServerApplication.class, false, systemProperties, null);
-			logger.warn("waiting for admin server");
-//			waitForServer(9393);
-			Thread.sleep(10000);
-			logger.warn("admin server ready");
+			adminServer = startAdmin();
 
-			SpringXDTemplate template = new SpringXDTemplate(new URI("http://localhost:9393"));
-
+			SpringXDTemplate template = new SpringXDTemplate(new URI(ADMIN_URL));
 			template.streamOperations().createStream("distributed-ticktock", "time|log", false);
 
 			PagedResources<StreamDefinitionResource> list = template.streamOperations().list();
@@ -112,7 +131,6 @@ public class HelloWorldTest {
 				logger.info(resource.toString());
 				assertEquals("distributed-ticktock", resource.getName());
 			}
-
 		}
 		finally {
 			if (adminServer != null) {
@@ -123,45 +141,49 @@ public class HelloWorldTest {
 
 	}
 
-	/**
-	 * Block the executing thread until a socket connection can be established
-	 * with the server.
-	 *
-	 * @param port number for server
-	 * @throws InterruptedException
-	 */
-	private static void waitForServer(int port) throws InterruptedException {
-		boolean canConnect = false;
-		int tries = 0;
-		Socket socket = null;
+	private static void waitForServer(String url) throws InterruptedException {
+		boolean connected = false;
+		Exception exception = null;
+		int httpStatus = 0;
+		long expiry = System.currentTimeMillis() + 30000;
+		HttpClient httpclient = new DefaultHttpClient();
 
-		do {
-			try {
-				Thread.sleep(100);
-				socket = SocketFactory.getDefault().createSocket();
-				socket.connect(new InetSocketAddress("localhost", port), 5000);
-				canConnect = true;
-				socket.close();
-				socket = null;
-			}
-			catch (IOException e) {
-				// ignore
-			}
-			finally {
-				if (socket != null) {
-					try {
-						socket.close();
-					}
-					catch (IOException e) {
-						// ignore
+		try {
+			do {
+				try {
+					Thread.sleep(100);
+
+					HttpGet httpGet = new HttpGet(url);
+					httpStatus = httpclient.execute(httpGet).getStatusLine().getStatusCode();
+					if (httpStatus == HttpStatus.SC_OK) {
+						connected = true;
 					}
 				}
+				catch (IOException e) {
+					exception = e;
+				}
 			}
+			while ((!connected) && System.currentTimeMillis() < expiry);
 		}
-		while ((!canConnect) && tries < 100);
+		finally {
+			httpclient.getConnectionManager().shutdown();
+		}
 
-		if (!canConnect) {
-			throw new IllegalStateException("Cannot connect to server on port " + port);
+		if (!connected) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("Failed to connect to '").append(url).append("'");
+			if (httpStatus > 0) {
+				builder.append("; last HTTP status: ").append(httpStatus);
+			}
+			if (exception != null) {
+				StringWriter writer = new StringWriter();
+				exception.printStackTrace(new PrintWriter(writer));
+				builder.append("; exception: ")
+						.append(exception.toString())
+						.append(", ").append(writer.toString());
+			}
+			throw new IllegalStateException(builder.toString());
 		}
 	}
+
 }
