@@ -171,25 +171,40 @@ public class DistributedTestUtils {
 
 		while (mapPidUuid.size() != pidCount && System.currentTimeMillis() < expiry) {
 			Thread.sleep(500);
+			mapPidUuid.clear();
 			PagedResources<ContainerAttributesResource> containers =
 					template.runtimeOperations().listRuntimeContainers();
 			for (ContainerAttributesResource container : containers) {
 				logger.trace("Container: {}", container);
 				long pid = Long.parseLong(container.getAttribute("pid"));
-				if (!mapPidUuid.containsKey(pid)) {
-					mapPidUuid.put(pid, container.getAttribute("id"));
-				}
+				mapPidUuid.put(pid, container.getAttribute("id"));
 			}
 		}
 
-		if (mapPidUuid.size() != pidCount) {
-			Set<Long> missingPids = new HashSet<>(pids);
-			missingPids.removeAll(mapPidUuid.keySet());
-			throw new IllegalStateException("Admin did not find the following container PIDs: " +
-					missingPids);
+		if (mapPidUuid.size() == pidCount && mapPidUuid.keySet().containsAll(pids)) {
+			return mapPidUuid;
 		}
 
-		return mapPidUuid;
+		Set<Long> missingPids = new HashSet<>(pids);
+		missingPids.removeAll(mapPidUuid.keySet());
+
+		Set<Long> unexpectedPids = new HashSet<>(mapPidUuid.keySet());
+		unexpectedPids.removeAll(pids);
+
+		StringBuilder builder = new StringBuilder();
+		if (!missingPids.isEmpty()) {
+			builder.append("Admin server did not find the following container PIDs:")
+					.append(missingPids);
+		}
+		if (!unexpectedPids.isEmpty()) {
+			if (builder.length() > 0) {
+				builder.append("; ");
+			}
+			builder.append("Admin server found the following unexpected container PIDs:")
+					.append(unexpectedPids);
+		}
+
+		throw new IllegalStateException(builder.toString());
 	}
 
 	/**
