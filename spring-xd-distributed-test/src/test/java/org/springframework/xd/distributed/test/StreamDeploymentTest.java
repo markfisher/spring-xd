@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.hateoas.PagedResources;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.xd.rest.client.domain.ModuleMetadataResource;
 import org.springframework.xd.rest.client.domain.StreamDefinitionResource;
@@ -128,10 +129,9 @@ public class StreamDeploymentTest {
 	 */
 	@After
 	public void clearStreams() throws Exception {
-		if (adminServer != null) {
-			SpringXDTemplate template = new SpringXDTemplate(new URI(ADMIN_URL));
-			template.streamOperations().destroyAll();
-		}
+		Assert.state(adminServer != null);
+		SpringXDTemplate template = new SpringXDTemplate(new URI(ADMIN_URL));
+		template.streamOperations().destroyAll();
 	}
 
 	/**
