@@ -133,7 +133,7 @@ public class DistributedTestUtils {
 	 * @see #waitForContainers
 	 */
 	public static JavaApplication<SimpleJavaApplication> startContainer() throws IOException {
-		Properties systemProperties = new Properties();
+		Properties systemProperties = System.getProperties();
 		systemProperties.setProperty("zk.client.connect", "localhost:" + ZOOKEEPER_PORT);
 
 		return launch(ContainerServerApplication.class, false, systemProperties, null);
@@ -167,7 +167,7 @@ public class DistributedTestUtils {
 			Set<Long> pids) throws InterruptedException, IllegalStateException {
 		int pidCount = pids.size();
 		Map<Long, String> mapPidUuid = new HashMap<>();
-		long expiry = System.currentTimeMillis() + 30000;
+		long expiry = System.currentTimeMillis() + 3 * 60000;
 
 		while (mapPidUuid.size() != pidCount && System.currentTimeMillis() < expiry) {
 			Thread.sleep(500);

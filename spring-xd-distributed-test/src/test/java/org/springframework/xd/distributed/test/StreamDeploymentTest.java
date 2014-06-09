@@ -16,17 +16,25 @@
 
 package org.springframework.xd.distributed.test;
 
-import static org.junit.Assert.*;
-import static org.springframework.xd.distributed.test.DistributedTestUtils.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import static org.springframework.xd.distributed.test.DistributedTestUtils.ADMIN_URL;
+import static org.springframework.xd.distributed.test.DistributedTestUtils.startAdmin;
+import static org.springframework.xd.distributed.test.DistributedTestUtils.startContainer;
+import static org.springframework.xd.distributed.test.DistributedTestUtils.startHsql;
+import static org.springframework.xd.distributed.test.DistributedTestUtils.startZooKeeper;
+import static org.springframework.xd.distributed.test.DistributedTestUtils.waitForContainers;
 
+import java.io.File;
+import java.io.FileReader;
 import java.net.URI;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 
-import com.oracle.tools.runtime.java.JavaApplication;
-import com.oracle.tools.runtime.java.SimpleJavaApplication;
 import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -38,11 +46,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.hateoas.PagedResources;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.Assert;
+import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.xd.rest.client.domain.ModuleMetadataResource;
 import org.springframework.xd.rest.client.domain.StreamDefinitionResource;
 import org.springframework.xd.rest.client.impl.SpringXDTemplate;
+
+import com.oracle.tools.runtime.java.JavaApplication;
+import com.oracle.tools.runtime.java.SimpleJavaApplication;
 
 /**
  * Multi container stream deployment tests.
@@ -196,6 +211,104 @@ public class StreamDeploymentTest {
 
 	}
 
+	@Test
+	public void testPartitioningWithRedis() throws Exception {
+		testPartitioning();
+	}
+
+	@Test
+	public void testPartitioningWithRabbit() throws Exception {
+		System.setProperty("xd.transport", "rabbit");
+		try {
+			testPartitioning();
+		}
+		finally {
+			System.clearProperty("xd.transport");
+		}
+	}
+
+	private void testPartitioning() throws Exception {
+		Map<Long, JavaApplication<SimpleJavaApplication>> mapPidContainers = new HashMap<>();
+		try {
+			for (int i = 0; i < 2; i++) {
+				JavaApplication<SimpleJavaApplication> containerServer = startContainer();
+				mapPidContainers.put(containerServer.getId(), containerServer);
+			}
+
+			SpringXDTemplate template = new SpringXDTemplate(new URI(ADMIN_URL));
+			logger.info("Waiting for containers...");
+			waitForContainers(template, mapPidContainers.keySet());
+			logger.info("Containers running");
+
+			String streamName = testName.getMethodName() + "-woodchuck";
+			File file = File.createTempFile("temp", ".txt");
+			file.deleteOnExit();
+
+			template.streamOperations().createStream(streamName, "http | splitter --expression=payload.split(' ') | " +
+					"file --dir=" + file.getParent() + " --name=${xd.container.id}", false);
+			verifySingleStreamCreation(template, streamName);
+
+			template.streamOperations().deploy(streamName,
+					"module.splitter.producer.partitionKeyExpression=payload,module.file.count=2");
+
+			// verify modules
+			Map<String, Properties> modules = new HashMap<String, Properties>();
+			int attempts = 0;
+			while (true && attempts++ < 10) {
+				Thread.sleep(500);
+				for (ModuleMetadataResource module : template.runtimeOperations().listRuntimeModules()) {
+					modules.put(module.getContainerId() + ":" + module.getModuleId(), module.getDeploymentProperties());
+				}
+				if (modules.size() == 4) {
+					break;
+				}
+			}
+
+			RestTemplate restTemplate = new RestTemplate();
+			String text = "how much wood would a woodchuck chuck if a woodchuck could chuck wood";
+			int postAttempts = 0;
+			while (postAttempts++ < 50) {
+				Thread.sleep(100);
+				try {
+					ResponseEntity<?> entity = restTemplate.postForEntity("http://localhost:9000", text, String.class);
+					assertEquals(HttpStatus.OK, entity.getStatusCode());
+					break;
+				}
+				catch (Exception e) {
+					// will try again
+				}
+			}
+
+			Thread.sleep(1000);
+
+			String[] results = new String[2];
+			for (Map.Entry<String, Properties> module : modules.entrySet()) {
+				if (module.getKey().contains("sink")) {
+					int index = Integer.parseInt(module.getValue().getProperty("consumer.partitionIndex"));
+					String container = module.getKey().substring(0, module.getKey().indexOf(':'));
+					File output = new File(file.getParent(), container + ".out");
+					output.deleteOnExit();
+					results[index] = output.exists() ? FileCopyUtils.copyToString(new FileReader(output)) : "";
+				}
+			}
+
+			// verify file content
+			assertEquals("how\nchuck\nchuck\n", results[0]);
+			assertEquals("much\nwood\nwould\na\nwoodchuck\nif\na\nwoodchuck\ncould\nwood\n", results[1]);
+		}
+		finally {
+			for (JavaApplication<SimpleJavaApplication> container : mapPidContainers.values()) {
+				try {
+					container.close();
+				}
+				catch (Exception e) {
+					// ignore exceptions on shutdown
+				}
+			}
+		}
+
+	}
+
 	/**
 	 * Start two containers and deploy a simple two module stream.
 	 * Shut down all of the containers. Start a new container and
@@ -281,7 +394,8 @@ public class StreamDeploymentTest {
 	 * @return mapping of modules to the containers they are deployed to
 	 * @throws InterruptedException
 	 */
-	private ModuleRuntimeContainers retrieveModuleRuntimeContainers(SpringXDTemplate template) throws InterruptedException {
+	private ModuleRuntimeContainers retrieveModuleRuntimeContainers(SpringXDTemplate template)
+			throws InterruptedException {
 		ModuleRuntimeContainers containers = new ModuleRuntimeContainers();
 		long expiry = System.currentTimeMillis() + 30000;
 		int moduleCount = 0;
@@ -315,7 +429,9 @@ public class StreamDeploymentTest {
 	 * deployed to.
 	 */
 	private class ModuleRuntimeContainers {
+
 		private String sourceContainer;
+
 		private String sinkContainer;
 
 		public String getSourceContainer() {
