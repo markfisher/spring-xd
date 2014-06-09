@@ -279,22 +279,35 @@ public class StreamDeploymentTest {
 				}
 			}
 
-			Thread.sleep(1000);
-
-			String[] results = new String[2];
+			File[] outputFiles = new File[2];
 			for (Map.Entry<String, Properties> module : modules.entrySet()) {
 				if (module.getKey().contains("sink")) {
 					int index = Integer.parseInt(module.getValue().getProperty("consumer.partitionIndex"));
 					String container = module.getKey().substring(0, module.getKey().indexOf(':'));
 					File output = new File(file.getParent(), container + ".out");
 					output.deleteOnExit();
-					results[index] = output.exists() ? FileCopyUtils.copyToString(new FileReader(output)) : "";
+					outputFiles[index] = output;
 				}
 			}
 
-			// verify file content
-			assertEquals("how\nchuck\nchuck\n", results[0]);
-			assertEquals("much\nwood\nwould\na\nwoodchuck\nif\na\nwoodchuck\ncould\nwood\n", results[1]);
+			String expectedPartition0 = "how\nchuck\nchuck\n";
+			String expectedPartition1 = "much\nwood\nwould\na\nwoodchuck\nif\na\nwoodchuck\ncould\nwood\n";
+
+			int fileAttempts = 0;
+			String[] results = new String[2];
+			while (fileAttempts++ < 10) {
+				Thread.sleep(500);
+				if (outputFiles[0].exists() && outputFiles[1].exists()) {
+					results[0] = FileCopyUtils.copyToString(new FileReader(outputFiles[0]));
+					results[1] = FileCopyUtils.copyToString(new FileReader(outputFiles[1]));
+					if (results[0].length() == expectedPartition0.length()
+							&& results[1].length() == expectedPartition1.length()) {
+						break;
+					}
+				}
+			}
+			assertEquals(expectedPartition0, results[0]);
+			assertEquals(expectedPartition1, results[1]);
 		}
 		finally {
 			for (JavaApplication<SimpleJavaApplication> container : mapPidContainers.values()) {
