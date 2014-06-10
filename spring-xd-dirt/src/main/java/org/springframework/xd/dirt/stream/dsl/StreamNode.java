@@ -127,10 +127,10 @@ public class StreamNode extends AstNode {
 	}
 
 
-	public int getIndexOfEffectiveLabel(String labelOrModuleName) {
+	public int getIndexOfLabel(String labelOrModuleName) {
 		for (int m = 0; m < moduleNodes.size(); m++) {
 			ModuleNode moduleNode = moduleNodes.get(m);
-			if (moduleNode.getEffectiveLabel().equals(labelOrModuleName)) {
+			if (moduleNode.getLabelName().equals(labelOrModuleName)) {
 				return m;
 			}
 		}

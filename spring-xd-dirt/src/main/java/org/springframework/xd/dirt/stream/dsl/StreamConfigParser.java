@@ -87,9 +87,9 @@ public class StreamConfigParser implements StreamLookupEnvironment {
 		Map<String, ModuleNode> alreadySeen = new LinkedHashMap<String, ModuleNode>();
 		for (int m = 0; m < ast.getModuleNodes().size(); m++) {
 			ModuleNode node = ast.getModuleNodes().get(m);
-			ModuleNode previous = alreadySeen.put(node.getEffectiveLabel(), node);
+			ModuleNode previous = alreadySeen.put(node.getLabelName(), node);
 			if (previous != null) {
-				String duplicate = node.getEffectiveLabel();
+				String duplicate = node.getLabelName();
 				int previousIndex = new ArrayList<String>(alreadySeen.keySet()).indexOf(duplicate);
 				throw new StreamDefinitionException(stream, node.startpos, XDDSLMessages.DUPLICATE_LABEL,
 						duplicate, previous.getName(), previousIndex, node.getName(), m);

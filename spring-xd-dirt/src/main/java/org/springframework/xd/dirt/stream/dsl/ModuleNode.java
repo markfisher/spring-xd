@@ -97,25 +97,14 @@ public class ModuleNode extends AstNode {
 	}
 
 	/**
-	 * Return the actual label supplied to this module, if any.
-	 */
-	public String getLabelName() {
-		if (label == null) {
-			return null;
-		}
-		else {
-			return label.getLabelName();
-		}
-	}
-
-	/**
-	 * Return the effective label for this module, that is<ul>
-	 * <li>an actual label if provided</li>
-	 * <li>the module name if no label was provided.</li>
+	 * Return the label for this module, that is:
+	 * <ul>
+	 * <li>an explicit label if provided</li>
+	 * <li>the module name if no label was provided</li>
 	 * </ul>
 	 */
-	public String getEffectiveLabel() {
-		return label == null ? getName() : getLabelName();
+	public String getLabelName() {
+		return (label != null) ? label.getLabelName() : moduleName;
 	}
 
 	/**

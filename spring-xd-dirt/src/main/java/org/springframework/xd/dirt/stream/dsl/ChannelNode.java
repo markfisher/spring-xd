@@ -158,7 +158,7 @@ public class ChannelNode extends AstNode {
 				catch (NumberFormatException nfe) {
 					// this is ok, probably wasn't a number
 					String indexString = toString(indexingElements);
-					int index = sn.getIndexOfEffectiveLabel(indexString);
+					int index = sn.getIndexOfLabel(indexString);
 					if (index != -1) {
 						indexingElements.clear();
 						indexingElements.add(0, sn.getModuleNodes().get(index).getName() + "." + index);

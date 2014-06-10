@@ -581,8 +581,8 @@ public class StreamConfigParserTests {
 	@Test
 	public void addingALabelLiftsAmbiguity() {
 		StreamNode ast = parse("file | out: file");
-		assertEquals("file", ast.getModuleNodes().get(0).getEffectiveLabel());
-		assertEquals("out", ast.getModuleNodes().get(1).getEffectiveLabel());
+		assertEquals("file", ast.getModuleNodes().get(0).getLabelName());
+		assertEquals("out", ast.getModuleNodes().get(1).getLabelName());
 
 	}
 
