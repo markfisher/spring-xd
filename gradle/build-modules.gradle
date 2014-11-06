@@ -309,7 +309,11 @@ project('modules.sink.router') {
 	}
 }
 
-
+project('modules.sink.spark-sample') {
+	dependencies {
+		runtime("spark-samples:spring-xd-spark:1.0.0-BUILD-SNAPSHOT")
+	}
+}
 
 
 // ================ M O D U L E S : J O B S ============================

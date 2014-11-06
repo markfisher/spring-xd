@@ -16,6 +16,7 @@
 
 package org.springframework.xd.module.core;
 
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.xd.module.ModuleDeploymentProperties;
@@ -48,16 +49,20 @@ public class ResourceConfiguredModule extends SimpleModule {
 	 *
 	 * @throws java.lang.IllegalStateException if both a .xml and .groovy file are present
 	 */
-	public static Resource resourceBasedConfigurationFile(SimpleModuleDefinition moduleDefinition, ClassLoader moduleClassLoader) {
+	public static Resource resourceBasedConfigurationFile(SimpleModuleDefinition moduleDefinition,
+			ClassLoader moduleClassLoader) {
 		Resource xml = new ClassPathResource("/config/" + moduleDefinition.getName() + ".xml", moduleClassLoader);
 		Resource groovy = new ClassPathResource("/config/" + moduleDefinition.getName() + ".groovy", moduleClassLoader);
 		boolean xmlOk = xml.exists() && xml.isReadable();
 		boolean groovyOk = groovy.exists() && groovy.isReadable();
 		if (xmlOk && groovyOk) {
-			throw new IllegalStateException(String.format("Found both resources '%s' and '%s' for module %s", xml, groovy, moduleDefinition));
-		} else if (xmlOk) {
+			throw new IllegalStateException(String.format("Found both resources '%s' and '%s' for module %s", xml,
+					groovy, moduleDefinition));
+		}
+		else if (xmlOk) {
 			return xml;
-		} else if (groovyOk) {
+		}
+		else if (groovyOk) {
 			return groovy;
 		}
 		else {
@@ -73,5 +78,4 @@ public class ResourceConfiguredModule extends SimpleModule {
 			addSource(source);
 		}
 	}
-
 }
