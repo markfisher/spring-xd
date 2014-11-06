@@ -62,6 +62,7 @@ allprojects {
 
 	repositories {
 		mavenCentral()
+		mavenLocal()
 		maven { url 'http://repo.spring.io/libs-snapshot' }
 		maven { url 'http://repo.spring.io/milestone' }
 		maven { url 'http://repo.spring.io/snapshot' }
@@ -408,6 +409,10 @@ project('spring-xd-dirt') {
 		// ************* Container: Imposed by some Module (can't move)
 		compile "com.sun.mail:javax.mail"
 
+		//compile "org.apache.spark:spark-core_2.10:$sparkVersion"
+		//compile "org.apache.spark:spark-streaming_2.10:$sparkVersion"
+		//compile project(":spring-xd-extensions-spark")
+		
 		// The following is needed eg by twitter module b/c jackson classes
 		// are loaded by RestTemplate and RestTemplate is in Dirt
 		runtime "org.codehaus.jackson:jackson-mapper-asl"
@@ -712,6 +717,12 @@ project('spring-xd-module') {
 		compile "org.springframework.boot:spring-boot-loader"
 		compile "com.fasterxml.jackson.core:jackson-databind"
 		compile project(':spring-xd-module-spi')
+		compile ("org.apache.spark:spark-core_2.10:$sparkVersion") {
+			exclude group: 'hsqldb'
+		}
+                compile ("org.apache.spark:spark-streaming_2.10:$sparkVersion") {
+			exclude group: 'hsqldb'
+		}
 	}
 }
 

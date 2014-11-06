@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/integration"
+			 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			 xmlns:beans="http://www.springframework.org/schema/beans"
+			 xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/integration
+		http://www.springframework.org/schema/integration/spring-integration.xsd">
+
+	<beans:bean id="sparkStreamingContext"
+				class="org.apache.spark.streaming.api.java.JavaStreamingContext">
+		<beans:constructor-arg ref="sparkConf"/>
+		<beans:constructor-arg ref="duration"/>
+	</beans:bean>
+
+	<beans:bean id="sparkConf" class="org.apache.spark.SparkConf">
+		<beans:property name="master" value="spark://igopinathan.local:7077"/>
+		<beans:property name="appName" value="xdSparkModule"/>
+	</beans:bean>
+
+	<beans:bean id="duration" class="org.apache.spark.streaming.Duration">
+		<beans:constructor-arg value="5000000"></beans:constructor-arg>
+	</beans:bean>
+
+</beans:beans>

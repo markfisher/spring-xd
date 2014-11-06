@@ -18,7 +18,6 @@ package org.springframework.xd.module.core;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,14 +27,12 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.context.ResourceLoaderAware;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.util.Assert;
 import org.springframework.validation.BindException;
-import org.springframework.xd.module.ModuleDefinition;
 import org.springframework.xd.module.ModuleDeploymentProperties;
 import org.springframework.xd.module.ModuleDescriptor;
 import org.springframework.xd.module.SimpleModuleDefinition;
@@ -43,8 +40,8 @@ import org.springframework.xd.module.options.ModuleOptions;
 import org.springframework.xd.module.options.ModuleOptionsMetadata;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 import org.springframework.xd.module.options.PrefixNarrowingModuleOptions;
+import org.springframework.xd.module.spark.SparkDriver;
 import org.springframework.xd.module.support.ModuleUtils;
-import org.springframework.xd.module.support.ParentLastURLClassLoader;
 
 /**
  * Determines the type of {@link Module} to create from the Module's metadata and creates a module instance. Also,
@@ -53,6 +50,7 @@ import org.springframework.xd.module.support.ParentLastURLClassLoader;
  * @author David Turanski
  */
 public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware {
+
 	private static Log log = LogFactory.getLog(ModuleFactory.class);
 
 	private final ModuleOptionsMetadataResolver moduleOptionsMetadataResolver;
@@ -98,10 +96,25 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 	 */
 	private Module createAndConfigureModuleInstance(ModuleDescriptor moduleDescriptor, ModuleOptions moduleOptions,
 			ModuleDeploymentProperties deploymentProperties) {
+		if (moduleDescriptor.getModuleName().contains("spark")) {
+			return createSparkModule(moduleDescriptor, moduleOptions, deploymentProperties);
+		}
 		Module module = moduleDescriptor.isComposed() ?
 				createCompositeModule(moduleDescriptor, moduleOptions, deploymentProperties) :
 				createSimpleModule(moduleDescriptor, moduleOptions, deploymentProperties);
 		return module;
+	}
+
+	private Module createSparkModule(ModuleDescriptor moduleDescriptor, ModuleOptions moduleOptions,
+			ModuleDeploymentProperties deploymentProperties) {
+		if (log.isInfoEnabled()) {
+			log.info("creating Spark module " + moduleDescriptor);
+		}
+		SimpleModuleDefinition definition = (SimpleModuleDefinition) moduleDescriptor.getModuleDefinition();
+		Resource moduleLocation = resourceLoader.getResource(definition.getLocation());
+		ClassLoader moduleClassLoader = ModuleUtils.createModuleClassLoader(moduleLocation, this.parentClassLoader);
+		return SimpleModuleCreator.createModule(moduleDescriptor, deploymentProperties, moduleClassLoader,
+				moduleOptions, SparkDriver.class);
 	}
 
 	/**
@@ -121,7 +134,8 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 		Resource moduleLocation = resourceLoader.getResource(definition.getLocation());
 		ClassLoader moduleClassLoader = ModuleUtils.createModuleClassLoader(moduleLocation, this.parentClassLoader);
 
-		Class<? extends SimpleModule> moduleClass = determineModuleClass((SimpleModuleDefinition) moduleDescriptor.getModuleDefinition(), moduleClassLoader);
+		Class<? extends SimpleModule> moduleClass = determineModuleClass(
+				(SimpleModuleDefinition) moduleDescriptor.getModuleDefinition(), moduleClassLoader);
 		Assert.notNull(moduleClass,
 				String.format("cannot create module '%s:%s' from module definition.", moduleDescriptor.getModuleName(),
 						moduleDescriptor.getType()));
@@ -129,9 +143,10 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 				.createModule(moduleDescriptor, deploymentProperties, moduleClassLoader, moduleOptions, moduleClass);
 	}
 
-	private Class<? extends SimpleModule> determineModuleClass(SimpleModuleDefinition moduleDefinition, ClassLoader moduleClassLoader) {
-		if( ResourceConfiguredModule.resourceBasedConfigurationFile(moduleDefinition, moduleClassLoader) != null) {
-				return ResourceConfiguredModule.class;
+	private Class<? extends SimpleModule> determineModuleClass(SimpleModuleDefinition moduleDefinition,
+			ClassLoader moduleClassLoader) {
+		if (ResourceConfiguredModule.resourceBasedConfigurationFile(moduleDefinition, moduleClassLoader) != null) {
+			return ResourceConfiguredModule.class;
 		}
 		return null;
 	}

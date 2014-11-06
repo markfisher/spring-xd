@@ -67,6 +67,8 @@ public abstract class AbstractStreamPlugin extends AbstractMessageBusBinderPlugi
 	@Override
 	public boolean supports(Module module) {
 		ModuleType moduleType = module.getType();
-		return (moduleType == ModuleType.source || moduleType == ModuleType.processor || moduleType == ModuleType.sink);
+		//Make sure to disable stream plugin for spark stream module.
+		return (!module.getName().contains("spark") &&
+				(moduleType == ModuleType.source || moduleType == ModuleType.processor || moduleType == ModuleType.sink));
 	}
 }

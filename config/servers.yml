@@ -285,3 +285,10 @@ xd:
 # json:
 #  prettyPrint: true
 ---
+
+# Spark Streaming Configuration
+#spark:
+#  master:
+#    url: spark://localhost:7077
+#  streaming:
+#    batchInterval: 50000
