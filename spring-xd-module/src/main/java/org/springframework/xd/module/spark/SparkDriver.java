@@ -27,11 +27,11 @@ import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.receiver.Receiver;
 
+import org.springframework.core.env.Environment;
 import org.springframework.xd.module.ModuleDeploymentProperties;
 import org.springframework.xd.module.ModuleDescriptor;
 import org.springframework.xd.module.core.ResourceConfiguredModule;
 import org.springframework.xd.module.options.ModuleOptions;
-import org.springframework.xd.spark.SparkModule;
 
 
 /**
@@ -40,9 +40,11 @@ import org.springframework.xd.spark.SparkModule;
  */
 public class SparkDriver extends ResourceConfiguredModule {
 
-	protected static final String MODULE_INPUT_CHANNEL = "input";
+	private static final String SPARK_MASTER_URL = "spark://localhost:7077";
 
-	protected static final String MODULE_OUTPUT_CHANNEL = "output";
+	private static final String SPARK_STREAMING_BATCH_INTERVAL = "5000";
+
+	private JavaStreamingContext javaStreamingContext;
 
 	/**
 	 * @param descriptor
@@ -53,19 +55,33 @@ public class SparkDriver extends ResourceConfiguredModule {
 		super(descriptor, deploymentProperties, classLoader, moduleOptions);
 	}
 
-//	public static Resource loadSparkConfigurationFile(ClassLoader moduleClassLoader) {
-//		Resource sparkXML = new ClassPathResource("/META-INF/spring-xd/spark/spark.xml", moduleClassLoader);
-//		return (sparkXML.exists() && sparkXML.isReadable()) ? sparkXML : null;
-//	}
-//
-//	@Override
-//	protected void configureModuleApplicationContext(SimpleModuleDefinition moduleDefinition) {
-//		super.configureModuleApplicationContext(moduleDefinition);
-//		Resource sparkSource = loadSparkConfigurationFile(getClassLoader());
-//		if (sparkSource != null) {
-//			addSource(sparkSource);
-//		}
-//	}
+	@Override
+	public void initialize() {
+		super.initialize();
+		URLClassLoader classLoader = (URLClassLoader) this.getClassLoader();
+		List<String> jars = new ArrayList<String>();
+		for (URL url : classLoader.getURLs()) {
+			String file = url.getFile().split("\\!", 2)[0];
+			if (file.endsWith(".jar")) {
+				jars.add(file);
+			}
+		}
+		URLClassLoader parentClassLoader = (URLClassLoader) this.getClassLoader().getParent();
+		for (URL url : parentClassLoader.getURLs()) {
+			String file = url.getFile().split("\\!", 2)[0];
+			//TODO: filter out unnecessary jar files
+			if (file.endsWith(".jar")) {
+				jars.add(file);
+			}
+		}
+		Environment env = this.getApplicationContext().getEnvironment();
+
+		SparkConf sparkConf = new SparkConf().setMaster(env.getProperty("spark.master.url", SPARK_MASTER_URL))
+				.setAppName(getDescriptor().getGroup() + "-" + getDescriptor().getModuleLabel())
+				.setJars(jars.toArray(new String[jars.size()]));
+		this.javaStreamingContext = new JavaStreamingContext(sparkConf, new Duration(Long.valueOf(
+				env.getProperty("spark.streaming.batchInterval", SPARK_STREAMING_BATCH_INTERVAL))));
+	}
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -74,33 +90,13 @@ public class SparkDriver extends ResourceConfiguredModule {
 		new Thread() {
 			@Override
 			public void run() {
-				URLClassLoader classLoader = (URLClassLoader) getClassLoader();
-				List<String> jars = new ArrayList<String>();
-				for (URL url : classLoader.getURLs()) {
-					String file = url.getFile().split("\\!", 2)[0];
-					if (file.endsWith(".jar")) {
-						jars.add(file);
-					}
-				}
-				URLClassLoader parentClassLoader = (URLClassLoader) getClassLoader().getParent();
-				for (URL url : parentClassLoader.getURLs()) {
-					String file = url.getFile().split("\\!", 2)[0];
-					if (file.endsWith(".jar") && file.contains("xd")) {
-						jars.add(file);
-					}
-				}
-				SparkConf conf = new SparkConf().setMaster("spark://igopinathan.local:7077")
-						.setAppName("SparkXDModule")
-						.setJars(jars.toArray(new String[jars.size()]));
-				JavaStreamingContext ssc = new JavaStreamingContext(conf, new Duration(50000));
-//				MessageBusReceiver receiver = getComponent(MessageBusReceiver.class);
 				//TODO: support multiple receivers with specific partitions
 				Receiver streamingReceiver = getComponent(Receiver.class);
-				JavaDStream<String> input = ssc.receiverStream(streamingReceiver);
+				JavaDStream<String> input = javaStreamingContext.receiverStream(streamingReceiver);
 				SparkModule<String> module = getComponent(SparkModule.class);
 				module.execute(input);
-				ssc.start();
-				ssc.awaitTermination();
+				javaStreamingContext.start();
+				javaStreamingContext.awaitTermination();
 			}
 		}.start();
 	}

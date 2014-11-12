@@ -18,45 +18,41 @@ package org.springframework.xd.dirt.module.spark;
 import java.io.Serializable;
 
 import org.apache.spark.storage.StorageLevel;
+import org.apache.spark.streaming.receiver.Receiver;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.messaging.Message;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
-import org.springframework.xd.module.spark.MessageBusReceiver;
 
 /**
  * @author Mark Fisher
  * @author Ilayaperumal Gopinathan
  */
 
-public class StreamingMessageBusReceiver extends MessageBusReceiver {
+public class MessageBusReceiver extends Receiver {
 
 	private static final long serialVersionUID = 1L;
 
-	private Channel channel = new Channel();
+	private Channel channel;
 
 	private MessageBus messageBus;
 
 	private String channelName;
 
-	public StreamingMessageBusReceiver() {
+	public MessageBusReceiver() {
 		super(StorageLevel.MEMORY_ONLY_SER()); // hard-coded for now
 	}
 
-	@Override
 	public void setInputChannelName(String channelName) {
 		this.channelName = channelName;
-	}
-
-	public DirectChannel getMessageChannel() {
-		return this.channel;
 	}
 
 	@Override
 	public void onStart() {
 		ApplicationContext context = new ClassPathXmlApplicationContext("META-INF/spring-xd/spark/receiver.xml");
+		channel = new Channel();
 		messageBus = context.getBean(MessageBus.class);
 		messageBus.bindConsumer(channelName, channel, null);
 	}

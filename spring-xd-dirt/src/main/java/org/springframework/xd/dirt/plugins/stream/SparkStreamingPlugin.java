@@ -18,7 +18,7 @@ package org.springframework.xd.dirt.plugins.stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
-import org.springframework.xd.dirt.module.spark.StreamingMessageBusReceiver;
+import org.springframework.xd.dirt.module.spark.MessageBusReceiver;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.core.Module;
@@ -26,10 +26,10 @@ import org.springframework.xd.module.core.Module;
 /**
  * @author Ilayaperumal Gopinathan
  */
-public class SparkPlugin extends StreamPlugin {
+public class SparkStreamingPlugin extends StreamPlugin {
 
 	@Autowired
-	public SparkPlugin(MessageBus messageBus, ZooKeeperConnection zkConnection) {
+	public SparkStreamingPlugin(MessageBus messageBus, ZooKeeperConnection zkConnection) {
 		super(messageBus, zkConnection);
 	}
 
@@ -41,7 +41,7 @@ public class SparkPlugin extends StreamPlugin {
 	@Override
 	public void postProcessModule(Module module) {
 		ConfigurableBeanFactory beanFactory = module.getApplicationContext().getBeanFactory();
-		StreamingMessageBusReceiver receiver = new StreamingMessageBusReceiver();
+		MessageBusReceiver receiver = new MessageBusReceiver();
 		receiver.setInputChannelName(getInputChannelName(module));
 		beanFactory.registerSingleton("streamingMessageBusReceiver", receiver);
 	}

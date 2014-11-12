@@ -15,19 +15,17 @@
  */
 package org.springframework.xd.module.spark;
 
-import org.apache.spark.storage.StorageLevel;
-import org.apache.spark.streaming.receiver.Receiver;
-
 /**
- * @author Ilayaperumal Gopinathan
+ * @author Mark Fisher
  */
 
-public abstract class MessageBusReceiver extends Receiver {
+import java.io.Serializable;
+import org.apache.spark.streaming.api.java.JavaDStream;
 
-	public MessageBusReceiver(StorageLevel storageLevel) {
-		super(storageLevel);
-	}
 
-	public abstract void setInputChannelName(String inputChannelName);
+public interface SparkModule<T> extends Serializable {
+
+	void execute(JavaDStream<T> input);
 
 }
+
