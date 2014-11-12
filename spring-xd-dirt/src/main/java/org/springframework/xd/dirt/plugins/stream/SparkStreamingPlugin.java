@@ -17,6 +17,7 @@ package org.springframework.xd.dirt.plugins.stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
 import org.springframework.xd.dirt.module.spark.MessageBusReceiver;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
@@ -40,8 +41,9 @@ public class SparkStreamingPlugin extends StreamPlugin {
 
 	@Override
 	public void postProcessModule(Module module) {
-		ConfigurableBeanFactory beanFactory = module.getApplicationContext().getBeanFactory();
-		MessageBusReceiver receiver = new MessageBusReceiver();
+		ConfigurableApplicationContext moduleContext = module.getApplicationContext();
+		ConfigurableBeanFactory beanFactory = moduleContext.getBeanFactory();
+		MessageBusReceiver receiver = new MessageBusReceiver(moduleContext.getEnvironment().getProperty("XD_TRANSPORT"));
 		receiver.setInputChannelName(getInputChannelName(module));
 		beanFactory.registerSingleton("streamingMessageBusReceiver", receiver);
 	}

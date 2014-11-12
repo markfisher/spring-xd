@@ -20,8 +20,9 @@ import java.io.Serializable;
 import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.streaming.receiver.Receiver;
 
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
+import org.springframework.boot.autoconfigure.redis.RedisAutoConfiguration;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.messaging.Message;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
@@ -35,14 +36,17 @@ public class MessageBusReceiver extends Receiver {
 
 	private static final long serialVersionUID = 1L;
 
+	private final String transport;
+
 	private Channel channel;
 
 	private MessageBus messageBus;
 
 	private String channelName;
 
-	public MessageBusReceiver() {
+	public MessageBusReceiver(String transport) {
 		super(StorageLevel.MEMORY_ONLY_SER()); // hard-coded for now
+		this.transport = transport;
 	}
 
 	public void setInputChannelName(String channelName) {
@@ -51,9 +55,20 @@ public class MessageBusReceiver extends Receiver {
 
 	@Override
 	public void onStart() {
-		ApplicationContext context = new ClassPathXmlApplicationContext("META-INF/spring-xd/spark/receiver.xml");
+		// Set the executor JVM's system property
+		System.setProperty("XD_TRANSPORT", transport);
+		SpringApplicationBuilder application = new SpringApplicationBuilder()
+				.sources(MessageBusConfiguration.class)
+				.web(false);
+		if (transport.equals("rabbit")) {
+			application.sources(RabbitAutoConfiguration.class);
+		}
+		else if (transport.equals("redis")) {
+			application.sources(RedisAutoConfiguration.class);
+		}
+		application.run();
 		channel = new Channel();
-		messageBus = context.getBean(MessageBus.class);
+		messageBus = application.context().getBean(MessageBus.class);
 		messageBus.bindConsumer(channelName, channel, null);
 	}
 
