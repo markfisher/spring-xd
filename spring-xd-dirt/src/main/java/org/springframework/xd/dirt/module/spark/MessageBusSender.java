@@ -15,11 +15,7 @@
  */
 package org.springframework.xd.dirt.module.spark;
 
-import java.io.Serializable;
 import java.util.Properties;
-
-import org.apache.spark.storage.StorageLevel;
-import org.apache.spark.streaming.receiver.Receiver;
 
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.boot.autoconfigure.redis.RedisAutoConfiguration;
@@ -27,42 +23,30 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.env.PropertiesPropertySource;
-import org.springframework.integration.channel.DirectChannel;
-import org.springframework.messaging.Message;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
+import org.springframework.xd.module.spark.SparkMessageSender;
 
 /**
- * @author Mark Fisher
  * @author Ilayaperumal Gopinathan
  */
-
-public class MessageBusReceiver extends Receiver {
-
-	private static final long serialVersionUID = 1L;
-
-	private Channel channel;
-
-	private MessageBus messageBus;
-
-	private String channelName;
+public class MessageBusSender extends SparkMessageSender {
 
 	private final Properties properties;
 
-	public MessageBusReceiver(Properties properties) {
-		super(StorageLevel.MEMORY_ONLY_SER()); // hard-coded for now
+	private final String outputChannelName;
+
+	private MessageBus messageBus;
+
+	public MessageBusSender(Properties properties, String outputChannelName){
 		this.properties = properties;
+		this.outputChannelName = outputChannelName;
 	}
 
-	public void setInputChannelName(String channelName) {
-		this.channelName = channelName;
-	}
-
-	@Override
-	public void onStart() {
+	public void start() {
 		String transport = properties.getProperty("XD_TRANSPORT");
 		SpringApplicationBuilder application = new SpringApplicationBuilder()
 				.sources(MessageBusConfiguration.class)
-				//Make sure the properties are always added at the first precedence level.
+						//Make sure the properties are always added at the first precedence level.
 				.listeners(new ApplicationListener<ApplicationEnvironmentPreparedEvent>() {
 					@Override
 					public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
@@ -78,24 +62,11 @@ public class MessageBusReceiver extends Receiver {
 			application.sources(RedisAutoConfiguration.class);
 		}
 		application.run();
-		channel = new Channel();
 		messageBus = application.context().getBean(MessageBus.class);
-		messageBus.bindConsumer(channelName, channel, null);
+		messageBus.bindProducer(outputChannelName, this, null);
 	}
 
-	@Override
-	public void onStop() {
-		messageBus.unbindConsumers(channelName);
-	}
-
-	public class Channel extends DirectChannel implements Serializable {
-
-		private static final long serialVersionUID = 1L;
-
-		@Override
-		protected boolean doSend(Message<?> message, long timeout) {
-			store(message.getPayload().toString());
-			return true;
-		}
+	public void stop() {
+		messageBus.unbindProducer(outputChannelName, this);
 	}
 }

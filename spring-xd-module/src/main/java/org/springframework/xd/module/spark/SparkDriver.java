@@ -32,8 +32,9 @@ import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaDStreamLike;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.receiver.Receiver;
+
 import org.springframework.core.env.Environment;
-import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.xd.module.ModuleDeploymentProperties;
 import org.springframework.xd.module.ModuleDescriptor;
 import org.springframework.xd.module.core.ResourceConfiguredModule;
@@ -42,7 +43,7 @@ import org.springframework.xd.module.options.ModuleOptions;
 /**
  * The driver which adapts an implementation of Spark {@link Processor} or
  * {@link Sink} implementation to be executed as an XD module.
- * 
+ *
  * @author Ilayaperumal Gopinathan
  * @author Mark Fisher
  */
@@ -97,12 +98,12 @@ public class SparkDriver extends ResourceConfiguredModule {
 		//TODO: support multiple receivers with specific partitions
 		final Receiver streamingReceiver = getComponent(Receiver.class);
 		final SparkModule module = getComponent(SparkModule.class);
-		final MessageChannel channel = getComponent("output", MessageChannel.class);
+		final SparkMessageSender sender = getComponent(SparkMessageSender.class);
 		Executors.newSingleThreadExecutor().execute(new Runnable() {
 			@Override
 			public void run() {
 				JavaDStream input = javaStreamingContext.receiverStream(streamingReceiver);
-				new ModuleExecutor().execute(input, module, channel);		
+				new ModuleExecutor().execute(input, module, sender);
 				javaStreamingContext.start();
 				javaStreamingContext.awaitTermination();
 			}
@@ -113,24 +114,27 @@ public class SparkDriver extends ResourceConfiguredModule {
 	@SuppressWarnings({"unchecked"})
 	private static class ModuleExecutor implements Serializable {
 
-		public void execute(JavaDStream input, SparkModule module, final MessageChannel channel) {
+		public void execute(JavaDStream input, SparkModule module, final SparkMessageSender sender) {
 			if (module instanceof Sink) {
 				((Sink) module).execute(input);
 			}
 			else if (module instanceof Processor) {
 				List<JavaDStreamLike> outputs = new ArrayList<JavaDStreamLike>();
 				((Processor) module).execute(input, outputs);
-				
+
 				for (JavaDStreamLike output : outputs) {
 					output.foreachRDD(new Function<JavaRDDLike, Void>() {
 						@Override
 						public Void call(JavaRDDLike rdd) throws Exception {
 							rdd.foreach(new VoidFunction() {
-
 								@Override
 								public void call(Object item) throws Exception {
-									//channel.send(MessageBuilder.withPayload("from Spark: " + item).build());
-									System.out.println("send to bus: " + item);
+									//todo: use rdd.foreachPartition and call start()/stop() for each partitions
+									// instead of each item in RDD
+									sender.start();
+									sender.send(MessageBuilder.withPayload("from Spark: " + item).build());
+									sender.stop();
+									//System.out.println("send to bus: " + item);
 								}
 							});
 							return null;

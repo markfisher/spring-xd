@@ -29,6 +29,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
 import org.springframework.xd.dirt.module.spark.MessageBusReceiver;
+import org.springframework.xd.dirt.module.spark.MessageBusSender;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.core.Module;
@@ -52,9 +53,14 @@ public class SparkStreamingPlugin extends StreamPlugin {
 	public void postProcessModule(Module module) {
 		ConfigurableApplicationContext moduleContext = module.getApplicationContext();
 		ConfigurableBeanFactory beanFactory = moduleContext.getBeanFactory();
-		MessageBusReceiver receiver = new MessageBusReceiver(getMessageBusProperties(moduleContext.getParent()));
+		Properties messageBusProperties = getMessageBusProperties(moduleContext.getParent());
+		MessageBusReceiver receiver = new MessageBusReceiver(messageBusProperties);
 		receiver.setInputChannelName(getInputChannelName(module));
 		beanFactory.registerSingleton("streamingMessageBusReceiver", receiver);
+		if (module.getType().equals(ModuleType.processor)) {
+			MessageBusSender sender = new MessageBusSender(messageBusProperties, getOutputChannelName(module));
+			beanFactory.registerSingleton("streamingMessageBusSender", sender);
+		}
 	}
 
 	private Properties getMessageBusProperties(ApplicationContext moduleParentContext) {
