@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -98,7 +99,8 @@ public class SparkDriver extends ResourceConfiguredModule {
 		//TODO: support multiple receivers with specific partitions
 		final Receiver streamingReceiver = getComponent(Receiver.class);
 		final SparkModule module = getComponent(SparkModule.class);
-		final SparkMessageSender sender = getComponent(SparkMessageSender.class);
+		final SparkMessageSender sender = (module instanceof Processor) ?
+				getComponent(SparkMessageSender.class) : null;
 		Executors.newSingleThreadExecutor().execute(new Runnable() {
 			@Override
 			public void run() {
@@ -125,16 +127,16 @@ public class SparkDriver extends ResourceConfiguredModule {
 				for (JavaDStreamLike output : outputs) {
 					output.foreachRDD(new Function<JavaRDDLike, Void>() {
 						@Override
-						public Void call(JavaRDDLike rdd) throws Exception {
-							rdd.foreach(new VoidFunction() {
+						public Void call(JavaRDDLike rdd) {
+							rdd.foreachPartition(new VoidFunction<Iterator<?>>() {
+
 								@Override
-								public void call(Object item) throws Exception {
-									//todo: use rdd.foreachPartition and call start()/stop() for each partitions
-									// instead of each item in RDD
+								public void call(Iterator<?> results) throws Exception {
 									sender.start();
-									sender.send(MessageBuilder.withPayload("from Spark: " + item).build());
+									while (results.hasNext()) {
+										sender.send(MessageBuilder.withPayload("from Spark: " + results.next()).build());
+									}
 									sender.stop();
-									//System.out.println("send to bus: " + item);
 								}
 							});
 							return null;
