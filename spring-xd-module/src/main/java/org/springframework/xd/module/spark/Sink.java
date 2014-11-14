@@ -15,13 +15,13 @@
  */
 package org.springframework.xd.module.spark;
 
-import java.io.Serializable;
-
 /**
- * Marker interface that is a base for {@link Processor} and {@link Sink}.
- * 
  * @author Mark Fisher
  */
-public interface SparkModule extends Serializable {
+import org.apache.spark.streaming.api.java.JavaDStream;
+
+public interface Sink<T> extends SparkModule {
+
+	void execute(JavaDStream<T> input);
 
 }

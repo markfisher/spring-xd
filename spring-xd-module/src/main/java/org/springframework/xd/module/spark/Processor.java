@@ -13,15 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.xd.module.spark;
 
-import java.io.Serializable;
-
 /**
- * Marker interface that is a base for {@link Processor} and {@link Sink}.
- * 
  * @author Mark Fisher
  */
-public interface SparkModule extends Serializable {
+import java.util.List;
+
+import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaDStreamLike;
+
+public interface Processor<T> extends SparkModule {
+
+	void execute(JavaDStream<T> input, List<JavaDStreamLike> outputs);
 
 }
