@@ -16,11 +16,12 @@
 
 package org.springframework.xd.module.spark;
 
+import java.io.Serializable;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDDLike;
@@ -32,6 +33,7 @@ import org.apache.spark.streaming.api.java.JavaDStreamLike;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.receiver.Receiver;
 import org.springframework.core.env.Environment;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.xd.module.ModuleDeploymentProperties;
 import org.springframework.xd.module.ModuleDescriptor;
 import org.springframework.xd.module.core.ResourceConfiguredModule;
@@ -89,61 +91,53 @@ public class SparkDriver extends ResourceConfiguredModule {
 				env.getProperty("spark.streaming.batchInterval", SPARK_STREAMING_BATCH_INTERVAL))));
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public void start() {
 		super.start();
-		new Thread() {
+		//TODO: support multiple receivers with specific partitions
+		final Receiver streamingReceiver = getComponent(Receiver.class);
+		final SparkModule module = getComponent(SparkModule.class);
+		final MessageChannel channel = getComponent("output", MessageChannel.class);
+		Executors.newSingleThreadExecutor().execute(new Runnable() {
 			@Override
 			public void run() {
-				//TODO: support multiple receivers with specific partitions
-				Receiver streamingReceiver = getComponent(Receiver.class);
-				JavaDStream<String> input = javaStreamingContext.receiverStream(streamingReceiver);
-				SparkModule module = getComponent(SparkModule.class);
-				if (module instanceof Sink) {
-					((Sink) module).execute(input);
-				}
-				else if (module instanceof Processor) {
-					List<JavaDStreamLike> outputs = new ArrayList<JavaDStreamLike>();
-					((Processor) module).execute(input, outputs);
-					/*
-					for (JavaDStreamLike output : outputs) {
-						output.foreachRDD(new Function<JavaRDDLike, Void>() {
-							@Override
-							public Void call(JavaRDDLike rdd) throws Exception {
-								rdd.foreach(new VoidFunction() {
-
-									@Override
-									public void call(Object item) throws Exception {
-										//MessageChannel channel = getComponent("output", MessageChannel.class);
-										//channel.send(MessageBuilder.withPayload("from Spark: " + item).build());
-									}
-								});
-								return null;
-							}
-						});
-					}*/
-					for (JavaDStreamLike output : outputs) {
-						output.foreachRDD(new Function<JavaRDDLike, Void>() {
-							public Void call(JavaRDDLike rdd) {
-								rdd.foreachPartition(new VoidFunction<Iterator<?>>() {
-
-									@Override
-									public void call(Iterator<?> results) throws Exception {
-										while (results.hasNext()) {
-											//getChannel().send(MessageBuilder.withPayload(results.next()).build());
-											System.out.println("send to bus: " + results.next());
-										}
-									}
-								});
-								return null;
-							}
-						});
-					}
-				}
+				JavaDStream input = javaStreamingContext.receiverStream(streamingReceiver);
+				new ModuleExecutor().execute(input, module, channel);		
 				javaStreamingContext.start();
 				javaStreamingContext.awaitTermination();
 			}
-		}.start();
+		});
+	}
+
+
+	@SuppressWarnings({"unchecked"})
+	private static class ModuleExecutor implements Serializable {
+
+		public void execute(JavaDStream input, SparkModule module, final MessageChannel channel) {
+			if (module instanceof Sink) {
+				((Sink) module).execute(input);
+			}
+			else if (module instanceof Processor) {
+				List<JavaDStreamLike> outputs = new ArrayList<JavaDStreamLike>();
+				((Processor) module).execute(input, outputs);
+				
+				for (JavaDStreamLike output : outputs) {
+					output.foreachRDD(new Function<JavaRDDLike, Void>() {
+						@Override
+						public Void call(JavaRDDLike rdd) throws Exception {
+							rdd.foreach(new VoidFunction() {
+
+								@Override
+								public void call(Object item) throws Exception {
+									//channel.send(MessageBuilder.withPayload("from Spark: " + item).build());
+									System.out.println("send to bus: " + item);
+								}
+							});
+							return null;
+						}
+					});
+				}
+			}
+		}
 	}
 }
