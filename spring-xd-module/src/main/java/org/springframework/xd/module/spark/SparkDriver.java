@@ -85,12 +85,12 @@ public class SparkDriver extends ResourceConfiguredModule {
 			}
 		}
 		Environment env = this.getApplicationContext().getEnvironment();
-
+		String batchInterval = env.getProperty("batchInterval",
+				env.getProperty("spark.streaming.batchInterval", SPARK_STREAMING_BATCH_INTERVAL));
 		SparkConf sparkConf = new SparkConf().setMaster(env.getProperty("spark.master.url", SPARK_MASTER_URL))
 				.setAppName(getDescriptor().getGroup() + "-" + getDescriptor().getModuleLabel())
 				.setJars(jars.toArray(new String[jars.size()]));
-		this.javaStreamingContext = new JavaStreamingContext(sparkConf, new Duration(Long.valueOf(
-				env.getProperty("spark.streaming.batchInterval", SPARK_STREAMING_BATCH_INTERVAL))));
+		this.javaStreamingContext = new JavaStreamingContext(sparkConf, new Duration(Long.valueOf(batchInterval)));
 	}
 
 	@Override
