@@ -15,8 +15,17 @@
  */
 package org.springframework.xd.dirt.plugins.stream;
 
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Properties;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.boot.autoconfigure.amqp.RabbitProperties;
+import org.springframework.boot.autoconfigure.redis.RedisProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
 import org.springframework.xd.dirt.module.spark.MessageBusReceiver;
@@ -43,9 +52,65 @@ public class SparkStreamingPlugin extends StreamPlugin {
 	public void postProcessModule(Module module) {
 		ConfigurableApplicationContext moduleContext = module.getApplicationContext();
 		ConfigurableBeanFactory beanFactory = moduleContext.getBeanFactory();
-		MessageBusReceiver receiver = new MessageBusReceiver(moduleContext.getEnvironment().getProperty("XD_TRANSPORT"));
+		MessageBusReceiver receiver = new MessageBusReceiver(getMessageBusProperties(moduleContext.getParent()));
 		receiver.setInputChannelName(getInputChannelName(module));
 		beanFactory.registerSingleton("streamingMessageBusReceiver", receiver);
 	}
 
+	private Properties getMessageBusProperties(ApplicationContext moduleParentContext) {
+		Properties properties = new Properties();
+		String transport = moduleParentContext.getEnvironment().getProperty("XD_TRANSPORT");
+		properties.setProperty("XD_TRANSPORT", transport);
+		if (transport.equals("rabbit")) {
+			RabbitProperties rabbitProperties = moduleParentContext.getBean(RabbitProperties.class);
+			updateRabbitProperties(rabbitProperties, properties, "spring.rabbitmq.");
+		}
+		else if (transport.equals("redis")) {
+			RedisProperties redisProperties = moduleParentContext.getBean(RedisProperties.class);
+			updateRedisProperties(redisProperties, properties, "spring.redis.");
+		}
+		return properties;
+	}
+
+	private void updateRabbitProperties(RabbitProperties obj, Properties properties, String propertyPrefix) {
+
+		try {
+			for (PropertyDescriptor pd : Introspector.getBeanInfo(RabbitProperties.class).getPropertyDescriptors()) {
+				if (pd.getReadMethod() != null && !"class".equals(pd.getName())) {
+						properties.setProperty(propertyPrefix + pd.getName(), String.valueOf(pd.getReadMethod().invoke((obj))));
+				}
+			}
+		}
+		catch (IntrospectionException ie) {
+			//todo
+		}
+		catch (IllegalAccessException iae) {
+			//todo
+		}
+		catch (InvocationTargetException ite) {
+			//todo
+		}
+	}
+
+	private void updateRedisProperties(RedisProperties obj, Properties properties, String propertyPrefix) {
+
+		try {
+			for (PropertyDescriptor pd : Introspector.getBeanInfo(RedisProperties.class).getPropertyDescriptors()) {
+				if (pd.getReadMethod() != null && !"class".equals(pd.getName())) {
+					if (pd.getReadMethod() != null && !"class".equals(pd.getName())) {
+						properties.setProperty(propertyPrefix + pd.getName(), String.valueOf(pd.getReadMethod().invoke((obj))));
+					}
+				}
+			}
+		}
+		catch (IntrospectionException ie) {
+			//todo
+		}
+		catch (IllegalAccessException iae) {
+			//todo
+		}
+		catch (InvocationTargetException ite) {
+			//todo
+		}
+	}
 }

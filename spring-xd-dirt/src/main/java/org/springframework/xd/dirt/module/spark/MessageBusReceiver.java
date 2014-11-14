@@ -16,6 +16,7 @@
 package org.springframework.xd.dirt.module.spark;
 
 import java.io.Serializable;
+import java.util.Properties;
 
 import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.streaming.receiver.Receiver;
@@ -23,6 +24,9 @@ import org.apache.spark.streaming.receiver.Receiver;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.boot.autoconfigure.redis.RedisAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
+import org.springframework.context.ApplicationListener;
+import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.messaging.Message;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
@@ -36,17 +40,17 @@ public class MessageBusReceiver extends Receiver {
 
 	private static final long serialVersionUID = 1L;
 
-	private final String transport;
-
 	private Channel channel;
 
 	private MessageBus messageBus;
 
 	private String channelName;
 
-	public MessageBusReceiver(String transport) {
+	private final Properties properties;
+
+	public MessageBusReceiver(Properties properties) {
 		super(StorageLevel.MEMORY_ONLY_SER()); // hard-coded for now
-		this.transport = transport;
+		this.properties = properties;
 	}
 
 	public void setInputChannelName(String channelName) {
@@ -55,10 +59,16 @@ public class MessageBusReceiver extends Receiver {
 
 	@Override
 	public void onStart() {
-		// Set the executor JVM's system property
-		System.setProperty("XD_TRANSPORT", transport);
+		String transport = properties.getProperty("XD_TRANSPORT");
 		SpringApplicationBuilder application = new SpringApplicationBuilder()
 				.sources(MessageBusConfiguration.class)
+				//Make sure the properties are always added at the first precedence level.
+				.listeners(new ApplicationListener<ApplicationEnvironmentPreparedEvent>() {
+					@Override
+					public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
+						event.getEnvironment().getPropertySources().addFirst(new PropertiesPropertySource("executorEnvironment", properties));
+					}
+				})
 				.web(false);
 		if (transport.equals("rabbit")) {
 			application.sources(RabbitAutoConfiguration.class);
