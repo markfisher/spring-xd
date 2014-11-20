@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.xd.dirt.module.spark;
 
 import java.util.Properties;
@@ -28,6 +29,7 @@ import org.springframework.xd.module.spark.SparkMessageSender;
 
 /**
  * @author Ilayaperumal Gopinathan
+ * @author Mark Fisher
  */
 public class MessageBusSender extends SparkMessageSender {
 
@@ -37,12 +39,17 @@ public class MessageBusSender extends SparkMessageSender {
 
 	private MessageBus messageBus;
 
-	public MessageBusSender(Properties properties, String outputChannelName){
-		this.properties = properties;
+	private boolean started;
+
+	public MessageBusSender(String outputChannelName, Properties properties) {
 		this.outputChannelName = outputChannelName;
+		this.properties = properties;
 	}
 
 	public void start() {
+		if (started) {
+			return;
+		}
 		String transport = properties.getProperty("XD_TRANSPORT");
 		SpringApplicationBuilder application = new SpringApplicationBuilder()
 				.sources(MessageBusConfiguration.class)
@@ -64,9 +71,13 @@ public class MessageBusSender extends SparkMessageSender {
 		application.run();
 		messageBus = application.context().getBean(MessageBus.class);
 		messageBus.bindProducer(outputChannelName, this, null);
+		started = true;
 	}
 
 	public void stop() {
-		messageBus.unbindProducer(outputChannelName, this);
+		if (messageBus != null) {
+			messageBus.unbindProducer(outputChannelName, this);
+		}
+		started = false;
 	}
 }

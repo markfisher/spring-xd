@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.xd.dirt.plugins.stream;
 
 import java.beans.IntrospectionException;
@@ -58,7 +59,7 @@ public class SparkStreamingPlugin extends StreamPlugin {
 		receiver.setInputChannelName(getInputChannelName(module));
 		beanFactory.registerSingleton("streamingMessageBusReceiver", receiver);
 		if (module.getType().equals(ModuleType.processor)) {
-			MessageBusSender sender = new MessageBusSender(messageBusProperties, getOutputChannelName(module));
+			MessageBusSender sender = new MessageBusSender(getOutputChannelName(module), messageBusProperties);
 			beanFactory.registerSingleton("streamingMessageBusSender", sender);
 		}
 	}

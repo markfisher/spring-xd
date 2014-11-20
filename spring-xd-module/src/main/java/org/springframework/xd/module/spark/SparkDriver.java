@@ -33,7 +33,6 @@ import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaDStreamLike;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.receiver.Receiver;
-
 import org.springframework.core.env.Environment;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.xd.module.ModuleDeploymentProperties;
@@ -103,15 +102,32 @@ public class SparkDriver extends ResourceConfiguredModule {
 				getComponent(SparkMessageSender.class) : null;
 		Executors.newSingleThreadExecutor().execute(new Runnable() {
 			@Override
+			@SuppressWarnings("unchecked")
 			public void run() {
-				JavaDStream input = javaStreamingContext.receiverStream(streamingReceiver);
-				new ModuleExecutor().execute(input, module, sender);
-				javaStreamingContext.start();
-				javaStreamingContext.awaitTermination();
+				try {
+					JavaDStream input = javaStreamingContext.receiverStream(streamingReceiver);
+					new ModuleExecutor().execute(input, module, sender);
+					javaStreamingContext.start();
+					javaStreamingContext.awaitTermination();
+				}
+				catch (Exception e) {
+					// ignore
+				}
 			}
 		});
 	}
 
+	@Override
+	public void stop() {
+		try {
+			super.stop();
+			javaStreamingContext.ssc().sc().cancelAllJobs();
+			javaStreamingContext.stop();
+		}
+		catch (Exception e) {
+			// ignore
+		}
+	}
 
 	@SuppressWarnings({"unchecked"})
 	private static class ModuleExecutor implements Serializable {
@@ -132,9 +148,11 @@ public class SparkDriver extends ResourceConfiguredModule {
 
 								@Override
 								public void call(Iterator<?> results) throws Exception {
-									sender.start();
-									while (results.hasNext()) {
-										sender.send(MessageBuilder.withPayload("from Spark: " + results.next()).build());
+									if (results.hasNext()) {
+										sender.start();
+										while (results.hasNext()) {
+											sender.send(MessageBuilder.withPayload("" + results.next()).build());
+										}
 									}
 									sender.stop();
 								}
