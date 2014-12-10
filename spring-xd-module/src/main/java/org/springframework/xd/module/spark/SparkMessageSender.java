@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,23 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.rest.domain;
+package org.springframework.xd.module.spark;
 
+import java.io.Serializable;
+
+import org.springframework.integration.channel.DirectChannel;
 
 /**
- * Sibling of org.springframework.xd.module.ModuleType, but we don't want to drag that into client dependencies.
- * 
- * @author Eric Bottard
+ * Abstract serializable channel that sends Spark RDD items to the XD MessageBus.
+ *
  * @author Ilayaperumal Gopinathan
  */
-public enum RESTModuleType {
+public abstract class SparkMessageSender extends DirectChannel implements Serializable {
 
-	source, processor, sparkProcessor, reactorProcessor, sink, sparkSink, job;
+	private static final long serialVersionUID = 1L;
+
+	public abstract void start();
+
+	public abstract void stop();
 
 }

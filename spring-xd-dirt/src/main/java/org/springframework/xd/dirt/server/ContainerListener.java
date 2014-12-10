@@ -59,7 +59,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 	 * The {@link ModuleRedeployer} that deploys unallocated stream/job modules
 	 * upon new container arrival.
 	 */
-	private final ModuleRedeployer arrivingContainerModuleRedeployer;
+	private final ContainerMatchingModuleRedeployer containerMatchingModuleRedeployer;
 
 	/**
 	 * The {@link ModuleRedeployer} that re-deploys the stream/job modules
@@ -108,7 +108,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 			PathChildrenCache moduleDeploymentRequests, ContainerMatcher containerMatcher,
 			DeploymentUnitStateCalculator stateCalculator,
 			ScheduledExecutorService executorService, AtomicLong quietPeriod) {
-		this.arrivingContainerModuleRedeployer = new ArrivingContainerModuleRedeployer(zkConnection,
+		this.containerMatchingModuleRedeployer = new ContainerMatchingModuleRedeployer(zkConnection,
 				containerRepository, streamFactory, jobFactory, streamDeployments, jobDeployments,
 				moduleDeploymentRequests, containerMatcher, stateCalculator);
 		this.departingContainerModuleRedeployer = new DepartingContainerModuleRedeployer(zkConnection,
@@ -133,6 +133,9 @@ public class ContainerListener implements PathChildrenCacheListener {
 				arrivingContainerDeployer.schedule();
 				break;
 			case CHILD_UPDATED:
+				//todo: Avoid recursive deployment in case of failure in deployment.
+				container = getContainer(event.getData());
+				containerMatchingModuleRedeployer.onContainerAttributeChange(container);
 				break;
 			case CHILD_REMOVED:
 				container = getContainer(event.getData());
@@ -223,7 +226,7 @@ public class ContainerListener implements PathChildrenCacheListener {
 			if (containerArrival != null) {
 				if (System.currentTimeMillis() >= containerArrival.timestamp + quietPeriod.get()) {
 					try {
-						arrivingContainerModuleRedeployer.deployModules(containerArrival.container);
+						containerMatchingModuleRedeployer.deployModules(containerArrival.container);
 						latestContainer.compareAndSet(containerArrival, null);
 					}
 					catch (Exception e) {

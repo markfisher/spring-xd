@@ -41,6 +41,7 @@ import org.springframework.xd.dirt.zookeeper.Paths;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnectionListener;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperUtils;
+import org.springframework.xd.module.NoOpMessageBusBinderModule;
 import org.springframework.xd.module.core.Module;
 import org.springframework.xd.module.core.Plugin;
 
@@ -397,6 +398,11 @@ public abstract class AbstractMessageBusBinderPlugin extends AbstractPlugin {
 		@Override
 		public void onResume(CuratorFramework client) {
 		}
+	}
+
+	@Override
+	public boolean supports(Module module) {
+		return !(module instanceof NoOpMessageBusBinderModule);
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,8 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.rest.domain;
-
-
 /**
- * Sibling of org.springframework.xd.module.ModuleType, but we don't want to drag that into client dependencies.
- * 
- * @author Eric Bottard
- * @author Ilayaperumal Gopinathan
+ * Package for Spark module implementations.
  */
-public enum RESTModuleType {
 
-	source, processor, sparkProcessor, reactorProcessor, sink, sparkSink, job;
-
-}
+package org.springframework.xd.module.spark;

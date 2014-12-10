@@ -35,11 +35,13 @@ import org.springframework.util.Assert;
 import org.springframework.validation.BindException;
 import org.springframework.xd.module.ModuleDeploymentProperties;
 import org.springframework.xd.module.ModuleDescriptor;
+import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.SimpleModuleDefinition;
 import org.springframework.xd.module.options.ModuleOptions;
 import org.springframework.xd.module.options.ModuleOptionsMetadata;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 import org.springframework.xd.module.options.PrefixNarrowingModuleOptions;
+import org.springframework.xd.module.spark.SparkDriver;
 import org.springframework.xd.module.support.ModuleUtils;
 
 /**
@@ -49,6 +51,7 @@ import org.springframework.xd.module.support.ModuleUtils;
  * @author David Turanski
  */
 public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware {
+
 	private static Log log = LogFactory.getLog(ModuleFactory.class);
 
 	private final ModuleOptionsMetadataResolver moduleOptionsMetadataResolver;
@@ -94,6 +97,9 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 	 */
 	private Module createAndConfigureModuleInstance(ModuleDescriptor moduleDescriptor, ModuleOptions moduleOptions,
 			ModuleDeploymentProperties deploymentProperties) {
+		if (moduleDescriptor.getType().equals(ModuleType.sparkProcessor) || moduleDescriptor.getType().equals(ModuleType.sparkSink)) {
+			return createSparkModule(moduleDescriptor, moduleOptions, deploymentProperties);
+		}
 		Module module = moduleDescriptor.isComposed() ?
 				createCompositeModule(moduleDescriptor, moduleOptions, deploymentProperties) :
 				createSimpleModule(moduleDescriptor, moduleOptions, deploymentProperties);
@@ -133,6 +139,16 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 			return JavaConfiguredModule.class;
 		}
 		return null;
+	}
+
+	private Module createSparkModule(ModuleDescriptor moduleDescriptor, ModuleOptions moduleOptions, ModuleDeploymentProperties deploymentProperties) {
+		if (log.isInfoEnabled()) {
+			log.info("creating Spark module " + moduleDescriptor);
+		}
+		SimpleModuleDefinition definition = (SimpleModuleDefinition) moduleDescriptor.getModuleDefinition();
+		Resource moduleLocation = resourceLoader.getResource(definition.getLocation());
+		ClassLoader moduleClassLoader = ModuleUtils.createModuleClassLoader(moduleLocation, this.parentClassLoader);
+		return SimpleModuleCreator.createModule(moduleDescriptor, deploymentProperties, moduleClassLoader, moduleOptions, SparkDriver.class);
 	}
 
 	/**

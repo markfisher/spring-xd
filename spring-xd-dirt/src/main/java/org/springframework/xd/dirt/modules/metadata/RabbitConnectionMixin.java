@@ -18,11 +18,12 @@ package org.springframework.xd.dirt.modules.metadata;
 
 import org.hibernate.validator.constraints.NotBlank;
 
+import org.springframework.xd.dirt.integration.bus.RabbitConnectionProperties;
 import org.springframework.xd.module.options.spi.ModuleOption;
 
 /**
  * Factors out options for the typical connection setup to RabbitMQ.
- * 
+ *
  * @author Eric Bottard
  * @author Gary Russell
  * @author Glenn Renfro
@@ -30,17 +31,25 @@ import org.springframework.xd.module.options.spi.ModuleOption;
  */
 public class RabbitConnectionMixin {
 
-	private String vhost = "${spring.rabbitmq.virtual_host}";
+	private String vhost = "${" + RabbitConnectionProperties.VHOST + "}";
 
-	private String username = "${spring.rabbitmq.username}";
+	private String username = "${" + RabbitConnectionProperties.USERNAME + "}";
 
-	private String password = "${spring.rabbitmq.password}";
+	private String password = "${" + RabbitConnectionProperties.PASSWORD + "}";
 
-	private String addresses = "${spring.rabbitmq.addresses}";
+	private String addresses = "${" + RabbitConnectionProperties.ADDRESSES + "}";
 
-	private String useSSL = "${spring.rabbitmq.useSSL}";
+	private String useSSL = "${" + RabbitConnectionProperties.USE_SSL + "}";
 
-	private String sslPropertiesLocation = "${spring.rabbitmq.sslProperties}";
+	private String sslPropertiesLocation = "${" + RabbitConnectionProperties.SSL_PROPERTIES_LOCATION + "}";
+
+	public final String[] rabbitConnectionPropertyNames = new String[] {
+			vhost, username, password, useSSL, sslPropertiesLocation
+	};
+
+	public String[] getRabbitConnectionPropertyNames() {
+		return this.rabbitConnectionPropertyNames;
+	}
 
 	@NotBlank
 	public String getUsername() {

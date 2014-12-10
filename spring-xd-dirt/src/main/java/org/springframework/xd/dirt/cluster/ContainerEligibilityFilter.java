@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.rest.domain;
+package org.springframework.xd.dirt.cluster;
 
+import java.util.List;
+
+import org.springframework.xd.module.ModuleDescriptor;
 
 /**
- * Sibling of org.springframework.xd.module.ModuleType, but we don't want to drag that into client dependencies.
- * 
- * @author Eric Bottard
+ * A filter interface that applies filter for the given containers and returns
+ * eligible containers for deployment.
+ *
  * @author Ilayaperumal Gopinathan
  */
-public enum RESTModuleType {
+public interface ContainerEligibilityFilter {
 
-	source, processor, sparkProcessor, reactorProcessor, sink, sparkSink, job;
+	List<Container> applyFilter(ModuleDescriptor moduleDescriptor, Iterable<Container> containers);
 
 }

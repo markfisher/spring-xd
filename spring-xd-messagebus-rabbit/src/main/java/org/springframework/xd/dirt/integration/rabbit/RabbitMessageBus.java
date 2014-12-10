@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
+import com.rabbitmq.client.Channel;
 import org.aopalliance.aop.Advice;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -80,8 +81,6 @@ import org.springframework.xd.dirt.integration.bus.MessageBus;
 import org.springframework.xd.dirt.integration.bus.MessageBusSupport;
 import org.springframework.xd.dirt.integration.bus.serializer.MultiTypeCodec;
 
-import com.rabbitmq.client.Channel;
-
 /**
  * A {@link MessageBus} implementation backed by RabbitMQ.
  *
@@ -105,20 +104,20 @@ public class RabbitMessageBus extends MessageBusSupport implements DisposableBea
 
 	private static final int DEFAULT_TX_SIZE = 1;
 
-	private static final String[] DEFAULT_REQUEST_HEADER_PATTERNS = new String[] { "STANDARD_REQUEST_HEADERS", "*" };
+	private static final String[] DEFAULT_REQUEST_HEADER_PATTERNS = new String[] {"STANDARD_REQUEST_HEADERS", "*"};
 
-	private static final String[] DEFAULT_REPLY_HEADER_PATTERNS = new String[] { "STANDARD_REPLY_HEADERS", "*" };
+	private static final String[] DEFAULT_REPLY_HEADER_PATTERNS = new String[] {"STANDARD_REPLY_HEADERS", "*"};
 
 	private static final Set<Object> RABBIT_CONSUMER_PROPERTIES = new HashSet<Object>(Arrays.asList(new String[] {
-		BusProperties.MAX_CONCURRENCY,
-		RabbitPropertiesAccessor.ACK_MODE,
-		RabbitPropertiesAccessor.PREFETCH,
-		RabbitPropertiesAccessor.PREFIX,
-		RabbitPropertiesAccessor.REQUEST_HEADER_PATTERNS,
-		RabbitPropertiesAccessor.REQUEUE,
-		RabbitPropertiesAccessor.TRANSACTED,
-		RabbitPropertiesAccessor.TX_SIZE,
-		RabbitPropertiesAccessor.AUTO_BIND_DLQ
+			BusProperties.MAX_CONCURRENCY,
+			RabbitPropertiesAccessor.ACK_MODE,
+			RabbitPropertiesAccessor.PREFETCH,
+			RabbitPropertiesAccessor.PREFIX,
+			RabbitPropertiesAccessor.REQUEST_HEADER_PATTERNS,
+			RabbitPropertiesAccessor.REQUEUE,
+			RabbitPropertiesAccessor.TRANSACTED,
+			RabbitPropertiesAccessor.TX_SIZE,
+			RabbitPropertiesAccessor.AUTO_BIND_DLQ
 	}));
 
 	/**
@@ -155,7 +154,7 @@ public class RabbitMessageBus extends MessageBusSupport implements DisposableBea
 			// request
 			.addAll(SUPPORTED_BASIC_CONSUMER_PROPERTIES)
 			.add(BusProperties.CONCURRENCY)
-			// reply
+					// reply
 			.add(RabbitPropertiesAccessor.REPLY_HEADER_PATTERNS)
 			.add(RabbitPropertiesAccessor.DELIVERY_MODE)
 			.build();
@@ -200,7 +199,7 @@ public class RabbitMessageBus extends MessageBusSupport implements DisposableBea
 	private static final Set<Object> SUPPORTED_REQUESTING_PRODUCER_PROPERTIES = new SetBuilder()
 			// request
 			.addAll(SUPPORTED_BASIC_PRODUCER_PROPERTIES)
-			// reply
+					// reply
 			.addAll(SUPPORTED_BASIC_CONSUMER_PROPERTIES)
 			.add(BusProperties.CONCURRENCY)
 			.add(RabbitPropertiesAccessor.REPLY_HEADER_PATTERNS)
@@ -412,7 +411,7 @@ public class RabbitMessageBus extends MessageBusSupport implements DisposableBea
 								properties.getBackOffMaxInterval(this.defaultBackOffMaxInterval))
 						.recoverer(new RejectAndDontRequeueRecoverer())
 						.build();
-				listenerContainer.setAdviceChain(new Advice[] { retryInterceptor });
+				listenerContainer.setAdviceChain(new Advice[] {retryInterceptor});
 			}
 			listenerContainer.setAfterReceivePostProcessors(this.decompressingPostProcessor);
 			listenerContainer.afterPropertiesSet();
@@ -732,7 +731,13 @@ public class RabbitMessageBus extends MessageBusSupport implements DisposableBea
 			return false;
 		}
 
-	};
+	}
+
+
+	public String[] getMessageBusSpecificProperties() {
+		RabbitPropertiesAccessor propertiesAccessor = new RabbitPropertiesAccessor(null);
+		return propertiesAccessor.getDefaultProperties();
+	}
 
 	/**
 	 * Property accessor for the RabbitMessageBus. Refer to the Spring-AMQP
@@ -792,6 +797,23 @@ public class RabbitMessageBus extends MessageBusSupport implements DisposableBea
 
 		public RabbitPropertiesAccessor(Properties properties) {
 			super(properties);
+		}
+
+		public static final String[] RABBIT_PROPERTIES = new String[] {
+				ACK_MODE,
+				DELIVERY_MODE,
+				PREFETCH,
+				PREFIX,
+				REPLY_HEADER_PATTERNS,
+				REQUEST_HEADER_PATTERNS,
+				REQUEUE,
+				TRANSACTED,
+				TX_SIZE,
+				AUTO_BIND_DLQ
+		};
+
+		public String[] getDefaultProperties() {
+			return RABBIT_PROPERTIES;
 		}
 
 		public AcknowledgeMode getAcknowledgeMode(AcknowledgeMode defaultValue) {

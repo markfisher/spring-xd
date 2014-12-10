@@ -53,6 +53,7 @@ import org.springframework.xd.module.ModuleDescriptor;
 import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.RuntimeModuleDeploymentProperties;
 import org.springframework.xd.module.core.Module;
+import org.springframework.xd.module.spark.SparkDriver;
 
 /**
  * @author Mark Fisher
@@ -196,6 +197,10 @@ class DeploymentListener implements PathChildrenCacheListener {
 
 		try {
 			writeModuleMetadata(client, module, path);
+			if (module != null && ((module.getType().equals(ModuleType.sparkProcessor) ||
+					module.getType().equals(ModuleType.sparkSink))))  {
+				writeContainerAttributes(client, container, true);
+			}
 			client.setData().forPath(status.buildPath(), ZooKeeperUtils.mapToBytes(status.toMap()));
 		}
 		catch (KeeperException.NoNodeException e) {
@@ -264,6 +269,20 @@ class DeploymentListener implements PathChildrenCacheListener {
 						descriptor.getModuleLabel(), descriptor.getType().toString(), descriptor.getGroup());
 			}
 		}
+	}
+
+	private void writeContainerAttributes(CuratorFramework client, String container, boolean isDeployed) throws Exception {
+			Map<String, String> mapMetadata = new HashMap<String, String>();
+			String containerPath = Paths.build(Paths.CONTAINERS, container);
+			byte[] data = client.getData().forPath(containerPath);
+			Map<String, String> map = ZooKeeperUtils.bytesToMap(data);
+			if (isDeployed) {
+				map.put(SparkDriver.SPARK_MODULE_DEPLOYMENT_ATTRIBUTE, "true");
+			}
+			else {
+				map.remove(SparkDriver.SPARK_MODULE_DEPLOYMENT_ATTRIBUTE);
+			}
+			client.setData().forPath(containerPath, ZooKeeperUtils.mapToBytes(map));
 	}
 
 	/**
@@ -387,6 +406,15 @@ class DeploymentListener implements PathChildrenCacheListener {
 			mapDeployedModules.remove(key);
 			this.moduleDeployer.undeploy(descriptor);
 			unregisterTap(descriptor);
+			try {
+				if ((descriptor.getType().equals(ModuleType.sparkProcessor) ||
+						descriptor.getType().equals(ModuleType.sparkSink))) {
+					writeContainerAttributes(zkConnection.getClient(), containerAttributes.getId(), false);
+				}
+			}
+			catch(Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 

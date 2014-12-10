@@ -67,6 +67,7 @@ allprojects {
 
 	repositories {
 		mavenCentral()
+		mavenLocal()
 		maven { url 'http://repo.spring.io/libs-snapshot' }
 		maven { url 'http://repo.spring.io/milestone' }
 		maven { url 'http://repo.spring.io/snapshot' }
@@ -101,9 +102,9 @@ ext {
 	kafkaVersion = '0.8.1.1'
 	springShellVersion = '1.1.0.RELEASE'
 	zookeeperVersion = '3.4.6'
-	sparkVersion = '1.1.0'
+	sparkVersion = '1.2.0'
+	sparkScalaVersion = '2.10'
 	sqoopVersion = '1.4.5'
-
 
 	// Also in IO
 	nettyVersion = '3.7.0.Final' // N.B. Reactor depends on Netty 4
@@ -818,6 +819,9 @@ project('spring-xd-module') {
 		compile "org.springframework.boot:spring-boot-autoconfigure"
 		compile "org.springframework.boot:spring-boot-loader"
 		compile "com.fasterxml.jackson.core:jackson-databind"
+		compile ("org.apache.spark:spark-streaming_$sparkScalaVersion:$sparkVersion") {
+			exclude group: 'hsqldb'
+		}
 		compile project(':spring-xd-module-spi')
 	}
 }

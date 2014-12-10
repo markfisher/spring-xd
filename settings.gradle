@@ -40,7 +40,7 @@ include 'spring-xd-test-fixtures'
 include 'spring-xd-distributed-test'
 include 'documentation-toolchain'
 
-['source', 'processor', 'sink', 'job'].each {kind->
+['source', 'processor','sparkProcessor', 'sink', 'job'].each {kind->
 	new File(rootDir, "modules/${kind}").eachDir { dir ->
 		if (new File(dir, "config/${dir.name}.xml").exists()) {
 		    include ":modules.${kind}.${dir.name}"

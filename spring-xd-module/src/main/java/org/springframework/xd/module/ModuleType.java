@@ -17,11 +17,12 @@
 package org.springframework.xd.module;
 
 /**
- * Represents the kind of modules that make up a stream.
+ * Represents the kind of modules that make up a stream or job.
  * 
  * @author Glenn Renfro
+ * @author Ilayaperumal Gopinathan
  */
 public enum ModuleType {
-	source, processor, sink, job;
+	source, processor, reactorProcessor, sparkProcessor, sink, sparkSink, job;
 
 }

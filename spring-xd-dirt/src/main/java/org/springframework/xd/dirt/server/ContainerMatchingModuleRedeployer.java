@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.xd.dirt.cluster.Container;
+import org.springframework.xd.dirt.cluster.ContainerAttributes;
 import org.springframework.xd.dirt.cluster.ContainerMatcher;
 import org.springframework.xd.dirt.container.store.ContainerRepository;
 import org.springframework.xd.dirt.core.Job;
@@ -41,21 +42,22 @@ import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperUtils;
 import org.springframework.xd.module.ModuleDescriptor;
 import org.springframework.xd.module.RuntimeModuleDeploymentProperties;
+import org.springframework.xd.module.spark.SparkDriver;
 
 
 /**
- * The {@link ModuleRedeployer} that deploys the unallocated stream/job modules upon a new container arrival.
+ * The {@link ModuleRedeployer} that deploys the unallocated stream/job modules.
  *
  * @author Patrick Peralta
  * @author Mark Fisher
  * @author Ilayaperumal Gopinathan
  */
-public class ArrivingContainerModuleRedeployer extends ModuleRedeployer {
+public class ContainerMatchingModuleRedeployer extends ModuleRedeployer {
 
 	/**
 	 * Logger.
 	 */
-	protected final Logger logger = LoggerFactory.getLogger(ArrivingContainerModuleRedeployer.class);
+	protected final Logger logger = LoggerFactory.getLogger(ContainerMatchingModuleRedeployer.class);
 
 	/**
 	 * Cache of children under the stream deployment path.
@@ -80,7 +82,7 @@ public class ArrivingContainerModuleRedeployer extends ModuleRedeployer {
 	 * @param containerMatcher matches modules to containers
 	 * @param stateCalculator calculator for stream/job state
 	 */
-	public ArrivingContainerModuleRedeployer(ZooKeeperConnection zkConnection,
+	public ContainerMatchingModuleRedeployer(ZooKeeperConnection zkConnection,
 			ContainerRepository containerRepository,
 			StreamFactory streamFactory, JobFactory jobFactory,
 			PathChildrenCache streamDeployments, PathChildrenCache jobDeployments,
@@ -103,6 +105,13 @@ public class ArrivingContainerModuleRedeployer extends ModuleRedeployer {
 	protected void deployModules(Container container) throws Exception {
 		deployUnallocatedStreamModules();
 		deployUnallocatedJobModules();
+	}
+
+	protected void onContainerAttributeChange(Container container) throws Exception {
+		ContainerAttributes containerAttributes = container.getAttributes();
+		if (containerAttributes.get(SparkDriver.SPARK_MODULE_DEPLOYMENT_ATTRIBUTE) != null) {
+			this.deployModules(container);
+		}
 	}
 
 	/**

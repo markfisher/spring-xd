@@ -250,6 +250,13 @@ project('modules.processor.filter') {
 	}
 }
 
+project('modules.sparkProcessor.spark-wordcount') {
+	dependencies {
+		runtime("spring-xd-spark:example-modules:1.0.0-BUILD-SNAPSHOT")
+		runtime "com.google.guava:guava:17.0"
+	}
+}
+
 // ================ M O D U L E S : S I N K S ==========================
 
 project('modules.sink.tcp') {

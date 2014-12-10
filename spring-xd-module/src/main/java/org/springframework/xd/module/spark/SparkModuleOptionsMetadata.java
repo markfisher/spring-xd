@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.springframework.xd.module.spark;
 
-package org.springframework.xd.rest.domain;
-
+import org.springframework.xd.module.options.spi.ModuleOption;
 
 /**
- * Sibling of org.springframework.xd.module.ModuleType, but we don't want to drag that into client dependencies.
- * 
- * @author Eric Bottard
+ * Module options for {@link org.springframework.xd.module.spark.SparkModule}.
+ *
  * @author Ilayaperumal Gopinathan
  */
-public enum RESTModuleType {
+public class SparkModuleOptionsMetadata {
 
-	source, processor, sparkProcessor, reactorProcessor, sink, sparkSink, job;
+	private String batchInterval;
+
+	@ModuleOption("the time interval in millis for batching the stream events")
+	public void setBatchInterval(final String batchInterval) {
+		this.batchInterval = batchInterval;
+	}
+
+	public String getBatchInterval() {
+		return this.batchInterval;
+	}
 
 }

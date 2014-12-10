@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 the original author or authors.
+ * Copyright 2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.springframework.xd.rest.domain;
-
+package org.springframework.xd.module;
 
 /**
- * Sibling of org.springframework.xd.module.ModuleType, but we don't want to drag that into client dependencies.
- * 
- * @author Eric Bottard
+ * Marker interface for {@link org.springframework.xd.module.core.Module}
+ * that doesn't bind to message bus.
+ *
  * @author Ilayaperumal Gopinathan
  */
-public enum RESTModuleType {
-
-	source, processor, sparkProcessor, reactorProcessor, sink, sparkSink, job;
-
+public interface NoOpMessageBusBinderModule {
 }
