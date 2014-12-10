@@ -16,7 +16,7 @@
 
 package org.springframework.xd.dirt.plugins.stream;
 
-import static org.springframework.xd.module.options.spi.ModulePlaceholders.XD_STREAM_NAME_KEY;
+import static org.springframework.xd.module.options.spi.ModulePlaceholders.*;
 
 import java.util.Properties;
 
@@ -70,7 +70,7 @@ public class StreamPlugin extends AbstractStreamPlugin {
 
 	@Override
 	public void postProcessModule(Module module) {
-		bindConsumerAndProducers(module);
+			bindConsumerAndProducers(module);
 	}
 
 	@Override

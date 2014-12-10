@@ -16,9 +16,7 @@
 
 package org.springframework.xd.dirt.stream;
 
-import static org.springframework.xd.module.ModuleType.processor;
-import static org.springframework.xd.module.ModuleType.sink;
-import static org.springframework.xd.module.ModuleType.source;
+import static org.springframework.xd.module.ModuleType.*;
 
 import org.springframework.xd.module.ModuleType;
 
@@ -32,7 +30,8 @@ public enum ParsingContext {
 	/**
 	 * A full stream definition, which ought to start with a source (or channel) and end with a sink (or channel).
 	 */
-	stream(true, true, source, processor, sink),
+	stream(true, true, new ModuleType[] { source }, new ModuleType[] { processor },
+			new ModuleType[] { sink }),
 
 	/**
 	 * A composed module, which starts or ends on a processor.

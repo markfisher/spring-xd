@@ -6,6 +6,8 @@
 
 	<import resource="deployers.xml" />
 
+	<import resource="../sparkstreaming/container-eligibility-filter.xml" />
+
 	<context:annotation-config />
 
 	<context:component-scan base-package="org.springframework.xd.dirt.stream.completion" />
