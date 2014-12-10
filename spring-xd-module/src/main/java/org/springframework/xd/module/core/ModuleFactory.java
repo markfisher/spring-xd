@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2014-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,9 @@ import org.springframework.xd.module.options.ModuleOptions;
 import org.springframework.xd.module.options.ModuleOptionsMetadata;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 import org.springframework.xd.module.options.PrefixNarrowingModuleOptions;
+import org.springframework.xd.module.spark.SparkStreamingDriverModule;
 import org.springframework.xd.module.support.ModuleUtils;
+import org.springframework.xd.spark.streaming.Processor;
 
 /**
  * Determines the type of {@link Module} to create from the Module's metadata and creates a module instance. Also,
@@ -49,6 +51,7 @@ import org.springframework.xd.module.support.ModuleUtils;
  * @author David Turanski
  */
 public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware {
+
 	private static Log log = LogFactory.getLog(ModuleFactory.class);
 
 	private final ModuleOptionsMetadataResolver moduleOptionsMetadataResolver;
@@ -56,6 +59,8 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 	private volatile ClassLoader parentClassLoader = ModuleFactory.class.getClassLoader();
 
 	private ResourcePatternResolver resourceLoader = new PathMatchingResourcePatternResolver();
+
+	public static final String MODULE_EXECUTION_FRAMEWORK = "moduleExecutionFramework";
 
 	/**
 	 * @param moduleOptionsMetadataResolver Used to bind configured {@link ModuleOptions} to {@link Module} instances
@@ -94,6 +99,10 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 	 */
 	private Module createAndConfigureModuleInstance(ModuleDescriptor moduleDescriptor, ModuleOptions moduleOptions,
 			ModuleDeploymentProperties deploymentProperties) {
+		String name = (String) moduleOptions.asPropertySource().getProperty(MODULE_EXECUTION_FRAMEWORK);
+		if (Processor.MODULE_EXECUTION_FRAMEWORK.equals(name)) {
+			return createSparkModule(moduleDescriptor, moduleOptions, deploymentProperties);
+		}
 		Module module = moduleDescriptor.isComposed() ?
 				createCompositeModule(moduleDescriptor, moduleOptions, deploymentProperties) :
 				createSimpleModule(moduleDescriptor, moduleOptions, deploymentProperties);
@@ -133,6 +142,18 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 			return JavaConfiguredModule.class;
 		}
 		return null;
+	}
+
+	private Module createSparkModule(ModuleDescriptor moduleDescriptor, ModuleOptions moduleOptions,
+			ModuleDeploymentProperties deploymentProperties) {
+		if (log.isInfoEnabled()) {
+			log.info("creating Spark module " + moduleDescriptor);
+		}
+		SimpleModuleDefinition definition = (SimpleModuleDefinition) moduleDescriptor.getModuleDefinition();
+		Resource moduleLocation = resourceLoader.getResource(definition.getLocation());
+		ClassLoader moduleClassLoader = ModuleUtils.createModuleClassLoader(moduleLocation, this.parentClassLoader);
+		return SimpleModuleCreator.createModule(moduleDescriptor, deploymentProperties, moduleClassLoader,
+				moduleOptions, SparkStreamingDriverModule.class);
 	}
 
 	/**

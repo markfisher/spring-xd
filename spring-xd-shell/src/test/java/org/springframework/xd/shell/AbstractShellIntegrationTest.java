@@ -38,6 +38,7 @@ import org.springframework.shell.core.CommandResult;
 import org.springframework.shell.core.JLineShellComponent;
 import org.springframework.util.AlternativeJdkIdGenerator;
 import org.springframework.util.IdGenerator;
+import org.springframework.util.StringUtils;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
 import org.springframework.xd.dirt.module.ArchiveModuleRegistry;
 import org.springframework.xd.dirt.server.SingleNodeApplication;
@@ -89,8 +90,11 @@ public abstract class AbstractShellIntegrationTest {
 	@BeforeClass
 	public static synchronized void startUp() throws InterruptedException, IOException {
 		RandomConfigurationSupport randomConfigSupport = new RandomConfigurationSupport();
+		// todo: Ability to verify if the transport is valid and the required message broker is setup.
+		String transport = System.getProperty("XD_TRANSPORT");
 		if (application == null) {
-			application = new SingleNodeApplication().run("--transport", "local", "--analytics", "redis");
+			application = new SingleNodeApplication().run("--transport",
+					StringUtils.hasText(transport) ? transport : "local", "--analytics", "redis");
 			integrationTestSupport = new SingleNodeIntegrationTestSupport(application);
 			integrationTestSupport.addModuleRegistry(new ArchiveModuleRegistry("classpath:/spring-xd/xd/modules"));
 			Bootstrap bootstrap = new Bootstrap(new String[] { "--port", randomConfigSupport.getAdminServerPort() });

@@ -16,18 +16,16 @@
 
 package org.springframework.xd.shell.command;
 
-import static com.google.common.collect.Lists.newArrayList;
-import static com.google.common.collect.Maps.transformValues;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
+import static com.google.common.collect.Lists.*;
+import static com.google.common.collect.Maps.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Function;
 import org.junit.Test;
 
 import org.springframework.xd.rest.domain.ModuleDefinitionResource;
@@ -35,11 +33,9 @@ import org.springframework.xd.shell.util.Table;
 import org.springframework.xd.shell.util.TableHeader;
 import org.springframework.xd.shell.util.TableRow;
 
-import com.google.common.base.Function;
-
 /**
  * Tests for ModuleList.
- * 
+ *
  * @author Florent Biville
  */
 public class ModuleListTests {
@@ -56,7 +52,7 @@ public class ModuleListTests {
 				resource("aggregator", "processor", false),
 				resource("avro", "sink", false),
 				resource("myfile", "source", true)
-				)).renderByType();
+		)).renderByType();
 
 		Map<Integer, String> header = headerNames(modules.getHeaders());
 		assertThat(header.size(), equalTo(4));
@@ -65,7 +61,7 @@ public class ModuleListTests {
 				hasEntry(2, "    Processor"),
 				hasEntry(3, "    Sink"),
 				hasEntry(4, "    Job")
-				));
+		));
 
 		List<TableRow> rows = modules.getRows();
 		assertThat(rows, hasSize(2));
