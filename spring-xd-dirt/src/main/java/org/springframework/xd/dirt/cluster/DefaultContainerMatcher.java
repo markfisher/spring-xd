@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2014-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,10 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.expression.MapAccessor;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.spel.SpelEvaluationException;
@@ -51,13 +55,13 @@ import org.springframework.xd.module.ModuleDescriptor;
  * <p/>
  * In cases where all containers are not deploying a module, an attempt at container round robin distribution for module
  * deployments will be made (but not guaranteed).
- * 
+ *
  * @author Patrick Peralta
  * @author Mark Fisher
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  */
-public class DefaultContainerMatcher implements ContainerMatcher {
+public class DefaultContainerMatcher implements ContainerMatcher, ApplicationContextAware {
 
 	/**
 	 * Logger.
@@ -86,6 +90,8 @@ public class DefaultContainerMatcher implements ContainerMatcher {
 		evaluationContext.addPropertyAccessor(new MapAccessor());
 	}
 
+	private Collection<ContainerFilter> containerFilters;
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -98,18 +104,35 @@ public class DefaultContainerMatcher implements ContainerMatcher {
 		logger.debug("Matching containers for module {}", moduleDescriptor);
 		String criteria = deploymentProperties.getCriteria();
 		List<Container> candidates = findAllContainersMatchingCriteria(containers, criteria);
+		List<Container> filteredContainers = applyFilters(moduleDescriptor, candidates);
 		if (candidates.isEmpty() && StringUtils.hasText(criteria)) {
 			logger.warn("No currently available containers match deployment criteria '{}' for module '{}'.", criteria,
 					moduleDescriptor.getModuleName());
 		}
-		return distributeForRequestedCount(candidates, deploymentProperties.getCount());
+		return distributeForRequestedCount(filteredContainers, deploymentProperties.getCount());
+	}
+
+	/**
+	 * Apply all the available {@link ContainerFilter}s.
+	 *
+	 * @param moduleDescriptor the module descriptor for the module
+	 * @param candidates the list of available containers that match the selection criteria
+	 * @return the container candidates after applying the {@link ContainerFilter}s
+	 */
+	private List<Container> applyFilters(ModuleDescriptor moduleDescriptor, List<Container> candidates) {
+		if (containerFilters != null) {
+			for (ContainerFilter containerFilter : containerFilters) {
+				candidates = containerFilter.filterContainers(moduleDescriptor, candidates);
+			}
+		}
+		return candidates;
 	}
 
 	/**
 	 * Select a subset of containers to satisfy the requested number of module instances using a round robin
 	 * distribution for successive calls. A count of 0 means all members that matched the criteria expression. count >=
 	 * candidates means each of the candidates should host a module.
-	 * 
+	 *
 	 * @param candidates the list of available containers that match the selection criteria
 	 * @param count the requested number of module instances to deploy
 	 * @return a subset of candidates <= count
@@ -166,7 +189,7 @@ public class DefaultContainerMatcher implements ContainerMatcher {
 	/**
 	 * Evaluate the criteria expression against the attributes of the provided container to see if it is a candidate for
 	 * module deployment.
-	 * 
+	 *
 	 * @param container the container instance whose attributes should be considered
 	 * @param criteria the criteria expression to evaluate against the container attributes
 	 * @return whether the container is a candidate
@@ -190,7 +213,7 @@ public class DefaultContainerMatcher implements ContainerMatcher {
 
 	/**
 	 * Rotate the cached index over the number of available containers.
-	 * 
+	 *
 	 * @param availableContainerCount the number of available containers
 	 * @return the current count before rotating
 	 */
@@ -203,4 +226,14 @@ public class DefaultContainerMatcher implements ContainerMatcher {
 		return i;
 	}
 
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) {
+		ConfigurableApplicationContext appContext = (ConfigurableApplicationContext) applicationContext;
+		try {
+			this.containerFilters = appContext.getBeansOfType(ContainerFilter.class).values();
+		}
+		catch(BeansException be) {
+			this.containerFilters = new ArrayList<ContainerFilter>();
+		}
+	}
 }
