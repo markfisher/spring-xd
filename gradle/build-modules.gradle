@@ -239,6 +239,12 @@ project('modules.processor.filter') {
 	}
 }
 
+project('modules.processor.spark-wordcount') {
+	dependencies {
+		runtime("spring-xd-spark:example-modules:1.0.0-BUILD-SNAPSHOT")
+	}
+}
+
 // ================ M O D U L E S : S I N K S ==========================
 
 project('modules.sink.tcp') {
@@ -318,6 +324,11 @@ project('modules.sink.kafka') {
         }
 }
 
+project('modules.sink.spark-log') {
+	dependencies {
+		runtime("spring-xd-spark:example-modules:1.0.0-BUILD-SNAPSHOT")
+	}
+}
 
 // ================ M O D U L E S : J O B S ============================
 
