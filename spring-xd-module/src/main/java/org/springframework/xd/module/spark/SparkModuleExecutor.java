@@ -24,6 +24,7 @@ import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaDStreamLike;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.messaging.support.MessageBuilder;
 
 /**
@@ -33,7 +34,9 @@ import org.springframework.messaging.support.MessageBuilder;
  * @author Mark Fisher
  */
 @SuppressWarnings("unchecked")
-class SparkModuleExecutor implements Serializable {
+class SparkModuleExecutor implements Serializable, DisposableBean {
+
+	private static SparkMessageSender messageSender;
 
 	public void execute(JavaDStream input, SparkModule module, final SparkMessageSender sender) {
 		JavaDStreamLike output = module.process(input);
@@ -47,17 +50,26 @@ class SparkModuleExecutor implements Serializable {
 						@Override
 						public void call(Iterator<?> results) throws Exception {
 							if (results.hasNext()) {
-								sender.start();
+								if (messageSender == null) {
+									messageSender = sender;
+								}
+								messageSender.start();
 								while (results.hasNext()) {
-									sender.send(MessageBuilder.withPayload("" + results.next()).build());
+									messageSender.send(MessageBuilder.withPayload("" + results.next()).build());
 								}
 							}
-							sender.stop();
 						}
 					});
 					return null;
 				}
 			});
+		}
+	}
+
+	public void destroy() {
+		if (messageSender != null) {
+			messageSender.stop();
+			messageSender = null;
 		}
 	}
 

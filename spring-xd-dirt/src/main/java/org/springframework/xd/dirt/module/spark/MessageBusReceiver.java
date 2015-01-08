@@ -21,6 +21,9 @@ import java.util.Properties;
 
 import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.streaming.receiver.Receiver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.messaging.Message;
@@ -35,6 +38,11 @@ import org.springframework.xd.dirt.integration.bus.MessageBus;
 public class MessageBusReceiver extends Receiver {
 
 	private static final long serialVersionUID = 1L;
+
+	/**
+	 * Logger.
+	 */
+	private static final Logger logger = LoggerFactory.getLogger(MessageBusReceiver.class);
 
 	private MessageBus messageBus;
 
@@ -55,6 +63,7 @@ public class MessageBusReceiver extends Receiver {
 
 	@Override
 	public void onStart() {
+		logger.info("starting MessageBusReceiver");
 		applicationContext = MessageBusConfiguration.createApplicationContext(properties);
 		messageBus = applicationContext.getBean(MessageBus.class);
 		messageBus.bindConsumer(channelName, new Channel(), null);
@@ -62,6 +71,7 @@ public class MessageBusReceiver extends Receiver {
 
 	@Override
 	public void onStop() {
+		logger.info("stopping MessageBusReceiver");
 		messageBus.unbindConsumers(channelName);
 		applicationContext.close();
 	}

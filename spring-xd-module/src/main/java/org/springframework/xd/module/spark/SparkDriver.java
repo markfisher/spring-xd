@@ -28,6 +28,8 @@ import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.receiver.Receiver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
@@ -56,9 +58,16 @@ public class SparkDriver extends ResourceConfiguredModule implements NoOpMessage
 
 	public static final String SPARK_MODULE_DEPLOYMENT_ATTRIBUTE = "hasSparkModuleDeployed";
 
+	/**
+	 * Logger.
+	 */
+	private static final Logger logger = LoggerFactory.getLogger(SparkDriver.class);
+
 	private PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
 	private JavaStreamingContext streamingContext;
+
+	private SparkModuleExecutor executor;
 
 	/**
 	 * Create a SparkDriver
@@ -74,6 +83,7 @@ public class SparkDriver extends ResourceConfiguredModule implements NoOpMessage
 
 	@Override
 	public void start() {
+		logger.info("starting SparkDriver");
 		Environment env = this.getApplicationContext().getEnvironment();
 		String[] jars = getApplicationJars();
 		String batchInterval = env.getProperty("batchInterval",
@@ -89,13 +99,14 @@ public class SparkDriver extends ResourceConfiguredModule implements NoOpMessage
 		final SparkModule module = getComponent(SparkModule.class);
 		final SparkMessageSender sender = (ModuleType.sparkProcessor.equals(getType()))
 				? getComponent(SparkMessageSender.class) : null;
+		this.executor = new SparkModuleExecutor();
 		Executors.newSingleThreadExecutor().execute(new Runnable() {
 			@Override
 			@SuppressWarnings("unchecked")
 			public void run() {
 				try {
 					JavaDStream input = streamingContext.receiverStream(receiver);
-					new SparkModuleExecutor().execute(input, module, sender);
+					executor.execute(input, module, sender);
 					streamingContext.start();
 					streamingContext.awaitTermination();
 				}
@@ -165,10 +176,15 @@ public class SparkDriver extends ResourceConfiguredModule implements NoOpMessage
 
 	@Override
 	public void stop() {
+		logger.info("stopping SparkDriver");
 		try {
-			// todo: if possible, change to stop(false, true) without the cancel
+			if (executor != null) {
+				executor.destroy();
+			}
+			// todo: when possible (1.3.0), change following two lines to just this one:
+			// streamingContext.stop(false, true);
 			streamingContext.ssc().sc().cancelAllJobs();
-			// streamingContext.stop(true, true);
+			streamingContext.close();
 			super.stop();
 		}
 		catch (Exception e) {

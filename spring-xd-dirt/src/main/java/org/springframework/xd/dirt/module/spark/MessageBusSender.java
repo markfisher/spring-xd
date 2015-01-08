@@ -18,6 +18,9 @@ package org.springframework.xd.dirt.module.spark;
 
 import java.util.Properties;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
 import org.springframework.xd.module.spark.SparkMessageSender;
@@ -29,6 +32,11 @@ import org.springframework.xd.module.spark.SparkMessageSender;
  * @author Mark Fisher
  */
 public class MessageBusSender extends SparkMessageSender {
+
+	/**
+	 * Logger.
+	 */
+	private static final Logger logger = LoggerFactory.getLogger(MessageBusSender.class);
 
 	private final String outputChannelName;
 
@@ -47,6 +55,7 @@ public class MessageBusSender extends SparkMessageSender {
 		if (applicationContext != null) {
 			return;
 		}
+		logger.info("starting MessageBusSender");
 		applicationContext = MessageBusConfiguration.createApplicationContext(properties);
 		messageBus = applicationContext.getBean(MessageBus.class);
 		messageBus.bindProducer(outputChannelName, this, null);
@@ -54,9 +63,11 @@ public class MessageBusSender extends SparkMessageSender {
 
 	public void stop() {
 		if (messageBus != null) {
+			logger.info("stopping MessageBusSender");
 			messageBus.unbindProducer(outputChannelName, this);
 			applicationContext.close();
 			applicationContext = null;
+			messageBus = null;
 		}
 	}
 
