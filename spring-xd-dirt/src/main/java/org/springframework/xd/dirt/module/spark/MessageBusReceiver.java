@@ -50,12 +50,19 @@ public class MessageBusReceiver extends Receiver {
 
 	private String channelName;
 
+	private final LocalMessageBusHolder messageBusHolder;
+
 	private final Properties messageBusProperties;
 
 	private final Properties moduleConsumerProperties;
 
 	public MessageBusReceiver(Properties messageBusProperties, Properties moduleConsumerProperties) {
+		this(null, messageBusProperties, moduleConsumerProperties);
+	}
+
+	public MessageBusReceiver(LocalMessageBusHolder messageBusHolder, Properties messageBusProperties, Properties moduleConsumerProperties) {
 		super(StorageLevel.MEMORY_ONLY_SER()); // hard-coded for now
+		this.messageBusHolder = messageBusHolder;
 		this.messageBusProperties = messageBusProperties;
 		this.moduleConsumerProperties = moduleConsumerProperties;
 	}
@@ -67,8 +74,14 @@ public class MessageBusReceiver extends Receiver {
 	@Override
 	public void onStart() {
 		logger.info("starting MessageBusReceiver");
-		applicationContext = MessageBusConfiguration.createApplicationContext(messageBusProperties);
-		messageBus = applicationContext.getBean(MessageBus.class);
+		MessageBus messageBus;
+		if (messageBusHolder != null) {
+			messageBus = messageBusHolder.get();
+		}
+		else {
+			applicationContext = MessageBusConfiguration.createApplicationContext(messageBusProperties);
+			messageBus = applicationContext.getBean(MessageBus.class);
+		}
 		messageBus.bindConsumer(channelName, new Channel(), moduleConsumerProperties);
 	}
 
@@ -76,7 +89,9 @@ public class MessageBusReceiver extends Receiver {
 	public void onStop() {
 		logger.info("stopping MessageBusReceiver");
 		messageBus.unbindConsumers(channelName);
-		applicationContext.close();
+		if (applicationContext != null) {
+			applicationContext.close();
+		}
 	}
 
 

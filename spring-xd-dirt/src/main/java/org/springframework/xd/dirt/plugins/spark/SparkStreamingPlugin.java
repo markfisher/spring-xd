@@ -31,10 +31,12 @@ import org.springframework.xd.dirt.integration.bus.BusProperties;
 import org.springframework.xd.dirt.integration.bus.ConnectionProperties;
 import org.springframework.xd.dirt.integration.bus.MessageBus;
 import org.springframework.xd.dirt.integration.bus.MessageBusSupport;
+import org.springframework.xd.dirt.module.spark.LocalMessageBusHolder;
 import org.springframework.xd.dirt.module.spark.MessageBusReceiver;
 import org.springframework.xd.dirt.module.spark.MessageBusSender;
 import org.springframework.xd.dirt.plugins.stream.StreamPlugin;
 import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
+import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.core.Module;
 import org.springframework.xd.module.core.ModuleFactory;
 import org.springframework.xd.module.spark.SparkModule;
@@ -67,15 +69,33 @@ public class SparkStreamingPlugin extends StreamPlugin {
 		ConfigurableApplicationContext moduleContext = module.getApplicationContext();
 		String transport = moduleContext.getEnvironment().getProperty("XD_TRANSPORT");
 		Properties messageBusProperties = getMessageBusProperties(module, transport);
-		MessageBusReceiver receiver = new MessageBusReceiver(messageBusProperties,
-				this.extractConsumerProducerProperties(module)[0]);
-		registerMessageBusReceiver(receiver, module);
-		if (moduleExecutionFramework.equals(SparkModule.MODULE_EXECUTION_FRAMEWORK)) {
-			ConfigurableBeanFactory beanFactory = module.getApplicationContext().getBeanFactory();
-			MessageBusSender sender = new MessageBusSender(getOutputChannelName(module), messageBusProperties,
-					this.extractConsumerProducerProperties(module)[1]);
-			beanFactory.registerSingleton("messageBusSender", sender);
+		Properties inboundModuleProperties = this.extractConsumerProducerProperties(module)[0];
+		Properties outboundModuleProperties = this.extractConsumerProducerProperties(module)[1];
+
+		MessageBusReceiver receiver = null;
+		if (transport.equals("local")) {
+			//todo: if (spark.master.url does not start with "local") throw new IllegalStateException
+			LocalMessageBusHolder messageBusHolder = new LocalMessageBusHolder();
+			messageBusHolder.set(module.getComponent(MessageBus.class));
+			receiver = new MessageBusReceiver(messageBusHolder, messageBusProperties, inboundModuleProperties);
+			if (module.getType().equals(ModuleType.processor)) {
+				ConfigurableBeanFactory beanFactory = module.getApplicationContext().getBeanFactory();
+				MessageBusSender sender = new MessageBusSender(messageBusHolder,
+						getOutputChannelName(module), messageBusProperties, outboundModuleProperties);
+				beanFactory.registerSingleton("messageBusSender", sender);
+			}
 		}
+		else {
+			receiver = new MessageBusReceiver(messageBusProperties, inboundModuleProperties);
+			if (module.getType().equals(ModuleType.processor)) {
+				ConfigurableBeanFactory beanFactory = module.getApplicationContext().getBeanFactory();
+				MessageBusSender sender = new MessageBusSender(getOutputChannelName(module), messageBusProperties, outboundModuleProperties);
+				beanFactory.registerSingleton("messageBusSender", sender);
+			}
+		}
+
+		registerMessageBusReceiver(receiver, module);
+
 	}
 
 	private Properties getMessageBusProperties(Module module, String transport) {

@@ -40,6 +40,8 @@ public class MessageBusSender extends SparkMessageSender {
 
 	private final String outputChannelName;
 
+	private final LocalMessageBusHolder messageBusHolder;
+
 	private final Properties messageBusProperties;
 
 	private final Properties moduleProducerProperties;
@@ -49,26 +51,39 @@ public class MessageBusSender extends SparkMessageSender {
 	private ConfigurableApplicationContext applicationContext;
 
 	public MessageBusSender(String outputChannelName, Properties messageBusProperties, Properties moduleProducerProperties) {
+		this(null, outputChannelName, messageBusProperties, moduleProducerProperties);
+	}
+
+	public MessageBusSender(LocalMessageBusHolder messageBusHolder, String outputChannelName, Properties messageBusProperties, Properties moduleProducerProperties) {
+		this.messageBusHolder = messageBusHolder;
 		this.outputChannelName = outputChannelName;
 		this.messageBusProperties = messageBusProperties;
 		this.moduleProducerProperties = moduleProducerProperties;
 	}
 
 	public void start() {
-		if (applicationContext == null) {
+		if (messageBus == null) {
 			logger.info("starting MessageBusSender");
-			applicationContext = MessageBusConfiguration.createApplicationContext(messageBusProperties);
-			messageBus = applicationContext.getBean(MessageBus.class);
+			if (messageBusHolder != null) {
+				messageBus = messageBusHolder.get();
+			}
+			else {
+				applicationContext = MessageBusConfiguration.createApplicationContext(messageBusProperties);
+				messageBus = applicationContext.getBean(MessageBus.class);
+			}
 			messageBus.bindProducer(outputChannelName, this, moduleProducerProperties);
 		}
 	}
 
 	public void stop() {
-		if (applicationContext != null) {
+		if (messageBus != null) {
 			logger.info("stopping MessageBusSender");
 			messageBus.unbindProducer(outputChannelName, this);
-			applicationContext.close();
-			applicationContext = null;
+			if (applicationContext != null) {
+				applicationContext.close();
+				applicationContext = null;
+			}
+			messageBus = null;
 		}
 	}
 

@@ -33,16 +33,13 @@ public class SparkStreamingTests extends AbstractStreamIntegrationTest {
 	public void testSparkProcessor() throws Exception {
 		System.setProperty("spark.master.url", "local[5]");
 
-		//final FileSource source = newFileSource();
 		final HttpSource source = newHttpSource();
 		final FileSink sink = newFileSink().binary(true);
 
-		//source.appendToFile("foo foo foo");
-
-		final String stream = String.format("f1: %s | spark-word-count | f2: %s", source, sink);
+		final String stream = String.format("%s | spark-word-count | %s", source, sink);
 		stream().create(generateStreamName(), stream);
+		Thread.sleep(5000);
 		source.ensureReady().postData("foo foo foo");
-		//Thread.sleep(10000);
 		assertThat(sink, eventually(hasContentsThat(equalTo("(foo,3)"))));
 	}
 
