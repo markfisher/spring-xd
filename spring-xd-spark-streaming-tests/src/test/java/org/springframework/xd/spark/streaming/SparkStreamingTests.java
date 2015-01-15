@@ -13,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.xd.spark.streaming;
 
-import static org.hamcrest.core.IsEqual.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertThat;
+import static org.springframework.xd.shell.command.fixtures.XDMatchers.eventually;
+import static org.springframework.xd.shell.command.fixtures.XDMatchers.fileContent;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.util.Random;
 
 import org.junit.Test;
@@ -40,7 +42,7 @@ public class SparkStreamingTests extends AbstractStreamIntegrationTest {
 		System.setProperty("XD_TRANSPORT", "local");
 	}
 
-	private static final String messageToPost = "foo foo foo";
+	private static final String TEST_MESSAGE = "foo foo foo";
 
 	@Test
 	public void testSparkProcessor() throws Exception {
@@ -49,32 +51,25 @@ public class SparkStreamingTests extends AbstractStreamIntegrationTest {
 
 		final String stream = String.format("%s | spark-word-count | %s", source, sink);
 		stream().create(generateStreamName(), stream);
-		source.ensureReady().postData(messageToPost);
+		source.ensureReady().postData(TEST_MESSAGE);
 		assertThat(sink, XDMatchers.eventually(XDMatchers.hasContentsThat(equalTo("(foo,3)"))));
 	}
 
 	@Test
 	public void testSparkLog() throws Exception {
 		String fileName = getClass().getSimpleName() + new Random().nextInt() + ".txt";
-		File fileToDelete = new File(fileName);
+		File file = new File(fileName);
 		try {
 			final HttpSource source = newHttpSource();
 			final String stream = String.format("%s | spark-log --filePath=%s", source, fileName);
 			stream().create(generateStreamName(), stream);
-			source.ensureReady().postData(messageToPost);
-			//explicit sleep to wait for the message to get processed.
-			Thread.sleep(2000);
-			FileReader reader = new FileReader(fileName);
-			BufferedReader br = new BufferedReader(reader);
-			String s;
-			while (((s = br.readLine()) != null)) {
-				// note: the written content will have timestamp before the message.
-				assertTrue(s.endsWith(messageToPost));
-			}
+			source.ensureReady().postData(TEST_MESSAGE);
+			// note: the written content will have timestamp before the message.
+			assertThat(file, eventually(fileContent(endsWith(TEST_MESSAGE))));
 		}
 		finally {
-			if (fileToDelete.exists()) {
-				fileToDelete.delete();
+			if (file.exists()) {
+				file.delete();
 			}
 		}
 	}
