@@ -26,6 +26,7 @@ import org.springframework.xd.dirt.integration.bus.MessageBus;
  *
  * @author Mark Fisher
  */
+@SuppressWarnings("serial")
 class LocalMessageBusHolder implements Serializable {
 
 	private static MessageBus BUS;

@@ -31,6 +31,7 @@ import org.springframework.xd.spark.streaming.SparkMessageSender;
  * @author Ilayaperumal Gopinathan
  * @author Mark Fisher
  */
+@SuppressWarnings("serial")
 class MessageBusSender extends SparkMessageSender {
 
 	/**

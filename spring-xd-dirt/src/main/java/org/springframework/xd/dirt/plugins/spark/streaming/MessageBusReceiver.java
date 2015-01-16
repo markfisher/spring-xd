@@ -35,6 +35,7 @@ import org.springframework.xd.dirt.integration.bus.MessageBus;
  * @author Mark Fisher
  * @author Ilayaperumal Gopinathan
  */
+@SuppressWarnings({"rawtypes", "unchecked"})
 class MessageBusReceiver extends Receiver {
 
 	private static final long serialVersionUID = 1L;

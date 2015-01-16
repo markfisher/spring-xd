@@ -91,7 +91,7 @@ public abstract class AbstractShellIntegrationTest {
 	public static synchronized void startUp() throws InterruptedException, IOException {
 		RandomConfigurationSupport randomConfigSupport = new RandomConfigurationSupport();
 		// todo: Ability to verify if the transport is valid and the required message broker is setup.
-		String transport = System.getProperty("XD_TRANSPORT");
+		String transport = System.getProperty("XD_TRANSPORT_FOR_TEST");
 		if (application == null) {
 			application = new SingleNodeApplication().run("--transport",
 					StringUtils.hasText(transport) ? transport : "local", "--analytics", "redis");
@@ -102,6 +102,7 @@ public abstract class AbstractShellIntegrationTest {
 		}
 		if (!shell.isRunning()) {
 			shell.start();
+
 		}
 	}
 

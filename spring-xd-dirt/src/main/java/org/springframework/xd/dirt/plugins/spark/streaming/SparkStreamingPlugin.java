@@ -47,6 +47,7 @@ import org.springframework.xd.spark.streaming.Processor;
  * @author Ilayaperumal Gopinathan
  * @author Mark Fisher
  */
+@SuppressWarnings("rawtypes")
 public class SparkStreamingPlugin extends AbstractStreamPlugin {
 
 	@Autowired
