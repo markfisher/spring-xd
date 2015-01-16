@@ -14,8 +14,27 @@
  * limitations under the License.
  */
 
-/**
- * Package for Spark module implementations.
- */
+package org.springframework.xd.dirt.plugins.spark.streaming;
 
-package org.springframework.xd.module.spark;
+import java.io.Serializable;
+
+import org.springframework.xd.dirt.integration.bus.MessageBus;
+
+/**
+ * This class holds the static reference to the message bus (especially local messagebus) and makes it available at
+ * Spark executors in local mode. This makes it possible to use the same message bus object used by the container.
+ *
+ * @author Mark Fisher
+ */
+class LocalMessageBusHolder implements Serializable {
+
+	private static MessageBus BUS;
+
+	public void set(MessageBus messageBus) {
+		BUS = messageBus;
+	}
+
+	public MessageBus get() {
+		return BUS;
+	}
+}

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.module.spark;
+package org.springframework.xd.module.spark.streaming;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;

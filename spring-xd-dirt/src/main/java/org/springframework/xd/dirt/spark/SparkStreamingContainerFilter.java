@@ -36,7 +36,8 @@ import org.springframework.xd.spark.streaming.Processor;
 
 /**
  * A {@link org.springframework.xd.dirt.cluster.ContainerFilter} which filters out the containers that have a spark
- * streaming module running.This is necessary as multiple spark contexts can not be created on the same JVM-SPARK-2243.
+ * streaming module running.
+ * This is necessary as multiple spark contexts can not be created on the same JVM. See SPARK-2243.
  *
  * @author Ilayaperumal Gopinathan
  */
@@ -63,13 +64,13 @@ public class SparkStreamingContainerFilter implements ContainerFilter {
 		List<Container> containersForDeployment = Lists.newArrayList(availableContainers);
 		try {
 			options = optionsMetadata.interpolate(moduleDescriptor.getParameters());
-			String name = (String) options.asPropertySource().getProperty(ModuleFactory.MODULE_EXECUTION_FRAMEWORK);
+			String name = (String) options.asPropertySource().getProperty(ModuleFactory.MODULE_EXECUTION_FRAMEWORK_KEY);
 			if (Processor.MODULE_EXECUTION_FRAMEWORK.equals(name)) {
 				Iterable<ModuleMetadata> deployedModules = moduleMetadataRepository.findAll();
 				List<ModuleMetadata> sparkModules = new ArrayList<ModuleMetadata>();
 				for (ModuleMetadata moduleMetadata : deployedModules) {
 					String moduleExecutionFramework =
-							moduleMetadata.getModuleOptions().getProperty(ModuleFactory.MODULE_EXECUTION_FRAMEWORK);
+							moduleMetadata.getModuleOptions().getProperty(ModuleFactory.MODULE_EXECUTION_FRAMEWORK_KEY);
 					if (moduleExecutionFramework != null &&
 							(moduleExecutionFramework.equals(Processor.MODULE_EXECUTION_FRAMEWORK))) {
 						sparkModules.add(moduleMetadata);

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.dirt.plugins.spark;
+package org.springframework.xd.dirt.plugins.spark.streaming;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -37,7 +37,7 @@ import org.springframework.xd.dirt.zookeeper.ZooKeeperConnection;
 import org.springframework.xd.module.ModuleType;
 import org.springframework.xd.module.core.Module;
 import org.springframework.xd.module.core.ModuleFactory;
-import org.springframework.xd.module.spark.SparkStreamingDriverModule;
+import org.springframework.xd.module.spark.streaming.SparkStreamingDriverModule;
 import org.springframework.xd.spark.streaming.Processor;
 
 /**
@@ -56,7 +56,7 @@ public class SparkStreamingPlugin extends AbstractStreamPlugin {
 
 	@Override
 	public boolean supports(Module module) {
-		String moduleExecutionFramework = module.getProperties().getProperty(ModuleFactory.MODULE_EXECUTION_FRAMEWORK);
+		String moduleExecutionFramework = module.getProperties().getProperty(ModuleFactory.MODULE_EXECUTION_FRAMEWORK_KEY);
 		return (Processor.MODULE_EXECUTION_FRAMEWORK.equals(moduleExecutionFramework));
 	}
 

@@ -40,7 +40,7 @@ import org.springframework.xd.module.options.ModuleOptions;
 import org.springframework.xd.module.options.ModuleOptionsMetadata;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 import org.springframework.xd.module.options.PrefixNarrowingModuleOptions;
-import org.springframework.xd.module.spark.SparkStreamingDriverModule;
+import org.springframework.xd.module.spark.streaming.SparkStreamingDriverModule;
 import org.springframework.xd.module.support.ModuleUtils;
 import org.springframework.xd.spark.streaming.Processor;
 
@@ -49,6 +49,7 @@ import org.springframework.xd.spark.streaming.Processor;
  * resolves {@link org.springframework.xd.module.options.ModuleOptions} in the process.
  *
  * @author David Turanski
+ * @author Ilayaperumal Gopinathan
  */
 public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware {
 
@@ -60,7 +61,11 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 
 	private ResourcePatternResolver resourceLoader = new PathMatchingResourcePatternResolver();
 
-	public static final String MODULE_EXECUTION_FRAMEWORK = "moduleExecutionFramework";
+	/**
+	 * This key is used by the module to define the execution framework(spark streaming, reactor etc.,) to be used when
+	 * deploying it.
+	 */
+	public static final String MODULE_EXECUTION_FRAMEWORK_KEY = "moduleExecutionFramework";
 
 	/**
 	 * @param moduleOptionsMetadataResolver Used to bind configured {@link ModuleOptions} to {@link Module} instances
@@ -99,7 +104,7 @@ public class ModuleFactory implements BeanClassLoaderAware, ResourceLoaderAware 
 	 */
 	private Module createAndConfigureModuleInstance(ModuleDescriptor moduleDescriptor, ModuleOptions moduleOptions,
 			ModuleDeploymentProperties deploymentProperties) {
-		String name = (String) moduleOptions.asPropertySource().getProperty(MODULE_EXECUTION_FRAMEWORK);
+		String name = (String) moduleOptions.asPropertySource().getProperty(MODULE_EXECUTION_FRAMEWORK_KEY);
 		if (Processor.MODULE_EXECUTION_FRAMEWORK.equals(name)) {
 			return createSparkModule(moduleDescriptor, moduleOptions, deploymentProperties);
 		}

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.dirt.plugins.spark;
+package org.springframework.xd.dirt.plugins.spark.streaming;
 
 import java.io.Serializable;
 import java.util.Properties;

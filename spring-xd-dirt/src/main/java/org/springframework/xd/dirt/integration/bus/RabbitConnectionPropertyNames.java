@@ -16,6 +16,8 @@
 package org.springframework.xd.dirt.integration.bus;
 
 /**
+ * Rabbit message bus specific property names.
+ *
  * @author Ilayaperumal Gopinathan
  */
 public class RabbitConnectionPropertyNames implements ConnectionPropertyNames {

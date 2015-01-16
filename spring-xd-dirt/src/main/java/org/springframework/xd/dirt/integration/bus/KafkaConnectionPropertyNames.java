@@ -16,6 +16,8 @@
 package org.springframework.xd.dirt.integration.bus;
 
 /**
+ * Kafka message bus specific property names.
+ *
  * @author Ilayaperumal Gopinathan
  */
 public class KafkaConnectionPropertyNames implements ConnectionPropertyNames {

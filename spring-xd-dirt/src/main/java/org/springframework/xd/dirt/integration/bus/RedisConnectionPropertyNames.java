@@ -16,6 +16,8 @@
 package org.springframework.xd.dirt.integration.bus;
 
 /**
+ * Redis message bus specific property names.
+ *
  * @author Ilayaperumal Gopinathan
  */
 public class RedisConnectionPropertyNames implements ConnectionPropertyNames {

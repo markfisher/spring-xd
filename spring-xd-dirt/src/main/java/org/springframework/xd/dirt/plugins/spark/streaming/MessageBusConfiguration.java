@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.dirt.plugins.spark;
+package org.springframework.xd.dirt.plugins.spark.streaming;
 
 import java.util.Properties;
 
@@ -42,6 +42,15 @@ import org.springframework.xd.dirt.util.ConfigLocations;
 		ConfigLocations.XD_CONFIG_ROOT + "bus/codec.xml"})
 class MessageBusConfiguration {
 
+	/**
+	 * This method called by {@link MessageBusReceiver} and {@link MessageBusSender} to setup
+	 * message bus configuration at the spark module executor process. This configuration
+	 * should use the same properties configured in XD container that deployed the spark
+	 * streaming module.
+	 *
+	 * @param properties the message bus properties
+	 * @return the application context that has MessageBus bean
+	 */
 	static ConfigurableApplicationContext createApplicationContext(final Properties properties) {
 		String transport = properties.getProperty("XD_TRANSPORT");
 		SpringApplicationBuilder application = new SpringApplicationBuilder()

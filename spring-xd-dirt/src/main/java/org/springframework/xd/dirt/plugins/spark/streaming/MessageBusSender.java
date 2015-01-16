@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.dirt.plugins.spark;
+package org.springframework.xd.dirt.plugins.spark.streaming;
 
 import java.util.Properties;
 
@@ -61,7 +61,8 @@ class MessageBusSender extends SparkMessageSender {
 		this.moduleProducerProperties = moduleProducerProperties;
 	}
 
-	public void start() {
+	@Override
+	public synchronized void start() {
 		if (messageBus == null) {
 			logger.info("starting MessageBusSender");
 			if (messageBusHolder != null) {
@@ -75,7 +76,8 @@ class MessageBusSender extends SparkMessageSender {
 		}
 	}
 
-	public void stop() {
+	@Override
+	public synchronized void stop() {
 		if (messageBus != null) {
 			logger.info("stopping MessageBusSender");
 			messageBus.unbindProducer(outputChannelName, this);

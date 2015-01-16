@@ -16,12 +16,17 @@
 package org.springframework.xd.dirt.integration.bus;
 
 /**
-
+ * {@link MessageBus} specific property names that each message bus uses.
+ *
  * @author Ilayaperumal Gopinathan
  */
 public interface ConnectionPropertyNames {
 
 	public static final String PACKAGE_NAME = "org.springframework.xd.dirt.integration.bus.";
 
+	/**
+	 * Get the message bus specific property names
+	 * @return the property key names.
+	 */
 	public String[] get();
 }

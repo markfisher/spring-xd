@@ -29,6 +29,10 @@ public interface Processor extends Serializable {
 
 	public static final String SPARK_MASTER_URL_PROP = "spark.master";
 
+	/**
+	 * The module execution framework is used by XD runtime to determine the module as
+	 * the spark streaming module.
+	 */
 	public static final String MODULE_EXECUTION_FRAMEWORK = "spark";
 
 	public static final String SPARK_DEFAULT_MASTER_URL = "spark://localhost:7077";
