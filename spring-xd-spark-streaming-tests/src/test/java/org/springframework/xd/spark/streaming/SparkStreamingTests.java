@@ -64,8 +64,7 @@ public class SparkStreamingTests extends AbstractStreamIntegrationTest {
 			final String stream = String.format("%s | spark-log --filePath=%s", source, fileName);
 			stream().create(generateStreamName(), stream);
 			source.ensureReady().postData(TEST_MESSAGE);
-			// note: the written content will have timestamp before the message.
-			assertThat(file, eventually(fileContent(endsWith(TEST_MESSAGE))));
+			assertThat(file, eventually(fileContent(endsWith(TEST_MESSAGE + System.lineSeparator()))));
 		}
 		finally {
 			if (file.exists()) {

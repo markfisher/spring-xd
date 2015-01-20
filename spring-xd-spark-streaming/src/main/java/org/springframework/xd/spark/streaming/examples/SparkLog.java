@@ -20,8 +20,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.Properties;
 
@@ -39,8 +37,6 @@ import org.springframework.xd.spark.streaming.SparkConfig;
  */
 @SuppressWarnings({ "unchecked", "rawtypes", "serial" })
 public class SparkLog implements Processor {
-
-	private static final SimpleDateFormat sdf = new SimpleDateFormat("[hh:mm:ss]");
 
 	private static File file;
 
@@ -73,14 +69,12 @@ public class SparkLog implements Processor {
 
 					@Override
 					public void call(Iterator<?> items) throws Exception {
-						final StringBuffer buffer = new StringBuffer(sdf.format(new Date()));
-						while (items.hasNext()) {
-							buffer.append(items.next());
-						}
 						try {
 							FileWriter fw = new FileWriter(file.getAbsoluteFile());
 							final BufferedWriter bw = new BufferedWriter(fw);
-							bw.write(buffer.toString());
+							while (items.hasNext()) {
+								bw.append(items.next() + System.lineSeparator());
+							}
 							bw.close();
 						}
 						catch (IOException ioe) {
