@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package org.springframework.xd.dirt.cluster;
+package org.springframework.xd.dirt.server;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -24,10 +25,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.expression.MapAccessor;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.spel.SpelEvaluationException;
@@ -36,11 +33,13 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+import org.springframework.xd.dirt.cluster.Container;
+import org.springframework.xd.dirt.cluster.ContainerFilter;
 import org.springframework.xd.module.ModuleDeploymentProperties;
 import org.springframework.xd.module.ModuleDescriptor;
 
 /**
- * Implementation of {@link ContainerMatcher} that returns a collection of containers to deploy a
+ * Implementation of a Container matching strategy that returns a collection of containers to deploy a
  * {@link ModuleDescriptor} to. This implementation examines the deployment properties for a stream to determine
  * the preferences for each individual module. The deployment properties can (optionally) specify two preferences:
  * <em>criteria</em> and <em>count</em>.
@@ -61,12 +60,12 @@ import org.springframework.xd.module.ModuleDescriptor;
  * @author David Turanski
  * @author Ilayaperumal Gopinathan
  */
-public class DefaultContainerMatcher implements ContainerMatcher, ApplicationContextAware {
+class ContainerMatcher {
 
 	/**
 	 * Logger.
 	 */
-	private static final Logger logger = LoggerFactory.getLogger(DefaultContainerMatcher.class);
+	private static final Logger logger = LoggerFactory.getLogger(ContainerMatcher.class);
 
 	/**
 	 * Current index for iterating over containers.
@@ -84,18 +83,41 @@ public class DefaultContainerMatcher implements ContainerMatcher, ApplicationCon
 	private final StandardEvaluationContext evaluationContext = new StandardEvaluationContext();
 
 	/**
+	 * Collection of {@link ContainerFilter}s to apply to the candidate Containers.
+	 */
+	private final Collection<ContainerFilter> containerFilters;
+
+
+	/**
 	 * Creates a container matcher instance and prepares the SpEL evaluation context to support Map properties directly.
 	 */
-	public DefaultContainerMatcher() {
+	public ContainerMatcher() {
+		this(new ContainerFilter[0]);
+	}
+
+	/**
+	 * Creates a container matcher instance with the provided {@link ContainerFilter}s
+	 * and prepares the SpEL evaluation context to support Map properties directly.
+	 */
+	public ContainerMatcher(ContainerFilter... containerFilters) {
+		this.containerFilters = (containerFilters != null)
+				? Collections.unmodifiableList(Arrays.asList(containerFilters))
+				: Collections.<ContainerFilter>emptyList();
 		evaluationContext.addPropertyAccessor(new MapAccessor());
 	}
 
-	private Collection<ContainerFilter> containerFilters;
 
 	/**
-	 * {@inheritDoc}
+	 * Matches the provided module against one of the candidate containers.
+	 *
+	 * @param moduleDescriptor      the module to match against
+	 * @param deploymentProperties  deployment properties for the module; this provides
+	 *                              hints such as the number of containers and other
+	 *                              matching criteria
+	 * @param containers            iterable list of containers to match against
+	 *
+	 * @return a collection of matched containers; collection is empty if no suitable containers are found
 	 */
-	@Override
 	public Collection<Container> match(ModuleDescriptor moduleDescriptor,
 			ModuleDeploymentProperties deploymentProperties, Iterable<Container> containers) {
 		Assert.notNull(moduleDescriptor, "'moduleDescriptor' cannot be null.");
@@ -104,22 +126,30 @@ public class DefaultContainerMatcher implements ContainerMatcher, ApplicationCon
 		logger.debug("Matching containers for module {}", moduleDescriptor);
 		String criteria = deploymentProperties.getCriteria();
 		List<Container> candidates = findAllContainersMatchingCriteria(containers, criteria);
-		List<Container> filteredContainers = applyFilters(moduleDescriptor, candidates);
-		if (candidates.isEmpty() && StringUtils.hasText(criteria)) {
+		Collection<Container> filteredContainers = applyFilters(moduleDescriptor, candidates);
+		List<Container> results = new ArrayList<Container>(filteredContainers);
+		if (results.isEmpty() && StringUtils.hasText(criteria)) {
 			logger.warn("No currently available containers match deployment criteria '{}' for module '{}'.", criteria,
 					moduleDescriptor.getModuleName());
 		}
-		return distributeForRequestedCount(filteredContainers, deploymentProperties.getCount());
+		return distributeForRequestedCount(results, deploymentProperties.getCount());
+	}
+
+	/**
+	 * Return the collection of {@link ContainerFilter}s.
+	 */
+	protected Collection<ContainerFilter> getContainerFilters() {
+		return this.containerFilters;
 	}
 
 	/**
 	 * Apply all the available {@link ContainerFilter}s.
 	 *
 	 * @param moduleDescriptor the module descriptor for the module
-	 * @param candidates the list of available containers that match the selection criteria
+	 * @param candidates the collection of available containers that match the selection criteria
 	 * @return the container candidates after applying the {@link ContainerFilter}s
 	 */
-	private List<Container> applyFilters(ModuleDescriptor moduleDescriptor, List<Container> candidates) {
+	private Collection<Container> applyFilters(ModuleDescriptor moduleDescriptor, Collection<Container> candidates) {
 		if (containerFilters != null) {
 			for (ContainerFilter containerFilter : containerFilters) {
 				candidates = containerFilter.filterContainers(moduleDescriptor, candidates);
@@ -226,14 +256,4 @@ public class DefaultContainerMatcher implements ContainerMatcher, ApplicationCon
 		return i;
 	}
 
-	@Override
-	public void setApplicationContext(ApplicationContext applicationContext) {
-		ConfigurableApplicationContext appContext = (ConfigurableApplicationContext) applicationContext;
-		try {
-			this.containerFilters = appContext.getBeansOfType(ContainerFilter.class).values();
-		}
-		catch(BeansException be) {
-			this.containerFilters = new ArrayList<ContainerFilter>();
-		}
-	}
 }

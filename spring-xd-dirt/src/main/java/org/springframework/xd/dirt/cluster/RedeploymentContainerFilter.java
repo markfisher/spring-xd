@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2014-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +21,15 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.springframework.util.Assert;
+import org.springframework.xd.module.ModuleDescriptor;
+
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
-import org.springframework.util.Assert;
-import org.springframework.xd.module.ModuleDeploymentProperties;
-import org.springframework.xd.module.ModuleDescriptor;
-
 /**
- * Wrapper for {@link org.springframework.xd.dirt.cluster.ContainerMatcher}
- * used for redeployment of modules when a container exits the cluster.
- * This matcher provides the following functionality:
+ * A {@link ContainerFilter} used for redeployment of modules when a container
+ * exits the cluster. This filter provides the following functionality:
  * <ol>
  *     <li>only one container is returned</li>
  *     <li>containers whose names are present in the provided
@@ -41,34 +39,27 @@ import org.springframework.xd.module.ModuleDescriptor;
  * </ol>
  *
  * @author Patrick Peralta
+ * @author Mark Fisher
  */
-public class RedeploymentContainerMatcher implements ContainerMatcher {
+public class RedeploymentContainerFilter implements ContainerFilter {
 
 	/**
-	 * Wrapped {@link org.springframework.xd.dirt.cluster.ContainerMatcher}.
-	 */
-	private final ContainerMatcher containerMatcher;
-
-	/**
-	 * Set of container names that should <b>not</b> be returned by {@link #match}.
+	 * Set of container names that should <b>not</b> be returned by {@link #filterContainers}.
 	 */
 	private final Set<String> exclusions;
 
 	/**
-	 * Predicate used to determine if a container should be returned by {@link #match}.
+	 * Predicate used to determine if a container should be returned by {@link #filterContainers}.
 	 */
 	private final MatchingPredicate matchingPredicate;
 
 	/**
-	 * Construct an {@code ExcludingContainerMatcher}.
+	 * Construct a {@link RedeploymentContainerFilter} with the provided exclusions.
 	 *
-	 * @param containerMatcher  container matcher to wrap
 	 * @param exclusions        collection of container names to exclude
 	 */
-	public RedeploymentContainerMatcher(ContainerMatcher containerMatcher, Collection<String> exclusions) {
-		Assert.notNull(containerMatcher);
+	public RedeploymentContainerFilter(Collection<String> exclusions) {
 		Assert.notNull(exclusions);
-		this.containerMatcher = containerMatcher;
 		this.exclusions = Collections.unmodifiableSet(new HashSet<String>(exclusions));
 		this.matchingPredicate = new MatchingPredicate();
 	}
@@ -77,19 +68,16 @@ public class RedeploymentContainerMatcher implements ContainerMatcher {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public Collection<Container> match(ModuleDescriptor moduleDescriptor,
-			ModuleDeploymentProperties deploymentProperties, Iterable<Container> containers) {
-
-		Collection<Container> matches = containerMatcher.match(moduleDescriptor,
-				deploymentProperties, Iterables.filter(containers, matchingPredicate));
-
-		return (matches.size() == 0)
-				? matches
-				: Collections.singleton(matches.iterator().next());
+	public Collection<Container> filterContainers(ModuleDescriptor moduleDescriptor, Iterable<Container> containers) {
+		Iterable<Container> matches = Iterables.filter(containers, matchingPredicate);
+		return (matches.iterator().hasNext())
+				? Collections.singleton(matches.iterator().next())
+				: Collections.<Container>emptyList();
 	}
 
+
 	/**
-	 * Predicate used to determine if a container should be returned by {@link #match}.
+	 * Predicate used to determine if a container should be returned by {@link #filterContainers}.
 	 */
 	private class MatchingPredicate implements Predicate<Container> {
 

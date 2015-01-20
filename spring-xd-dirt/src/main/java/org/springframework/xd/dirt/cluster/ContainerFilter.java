@@ -16,7 +16,7 @@
 
 package org.springframework.xd.dirt.cluster;
 
-import java.util.List;
+import java.util.Collection;
 
 import org.springframework.xd.module.ModuleDescriptor;
 
@@ -28,6 +28,6 @@ import org.springframework.xd.module.ModuleDescriptor;
  */
 public interface ContainerFilter {
 
-	List<Container> filterContainers(ModuleDescriptor moduleDescriptor, Iterable<Container> containers);
+	Collection<Container> filterContainers(ModuleDescriptor moduleDescriptor, Iterable<Container> containers);
 
 }

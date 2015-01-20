@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2014-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.xd.dirt.cluster.Container;
-import org.springframework.xd.dirt.cluster.ContainerMatcher;
+import org.springframework.xd.dirt.cluster.ContainerFilter;
 import org.springframework.xd.dirt.cluster.NoContainerException;
-import org.springframework.xd.dirt.cluster.RedeploymentContainerMatcher;
+import org.springframework.xd.dirt.cluster.RedeploymentContainerFilter;
 import org.springframework.xd.dirt.container.store.ContainerRepository;
 import org.springframework.xd.dirt.core.DeploymentUnit;
 import org.springframework.xd.dirt.core.DeploymentUnitStatus;
@@ -215,7 +216,7 @@ public abstract class ModuleRedeployer {
 	}
 
 	/**
-	 * Return a {@link org.springframework.xd.dirt.cluster.ContainerMatcher} that
+	 * Return a {@link org.springframework.xd.dirt.server.ContainerMatcher} that
 	 * will <b>exclude</b> containers that are already hosting the module.
 	 *
 	 * @param moduleDescriptor  containers that have deployed this module
@@ -230,7 +231,9 @@ public abstract class ModuleRedeployer {
 				? getContainersForJobModule(moduleDescriptor)
 				: getContainersForStreamModule(moduleDescriptor);
 
-		return new RedeploymentContainerMatcher(containerMatcher, containers);
+		Collection<ContainerFilter> filters = this.containerMatcher.getContainerFilters();
+		return new ContainerMatcher(ObjectUtils.addObjectToArray(
+				filters.toArray(new ContainerFilter[filters.size()]), new RedeploymentContainerFilter(containers)));
 	}
 
 	/**
