@@ -136,13 +136,6 @@ class ContainerMatcher {
 	}
 
 	/**
-	 * Return the collection of {@link ContainerFilter}s.
-	 */
-	protected Collection<ContainerFilter> getContainerFilters() {
-		return this.containerFilters;
-	}
-
-	/**
 	 * Apply all the available {@link ContainerFilter}s.
 	 *
 	 * @param moduleDescriptor the module descriptor for the module
