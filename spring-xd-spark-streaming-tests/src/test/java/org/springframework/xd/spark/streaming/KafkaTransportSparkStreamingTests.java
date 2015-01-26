@@ -19,6 +19,7 @@ package org.springframework.xd.spark.streaming;
 import java.util.Properties;
 
 import kafka.utils.TestUtils;
+
 import org.junit.ClassRule;
 import org.junit.Ignore;
 
@@ -37,7 +38,7 @@ public class KafkaTransportSparkStreamingTests extends AbstractSparkStreamingTes
 	static {
 		kafkaTestSupport = new KafkaTestSupport();
 		Properties brokerConfigProperties = TestUtils.createBrokerConfig(0, TestUtils.choosePort());
-		kafkaTestSupport.setKafkaConfig(brokerConfigProperties);
+		kafkaTestSupport.setBrokerConfig(brokerConfigProperties);
 		System.setProperty(KafkaConnectionPropertyNames.KAFKA_BROKERS,
 				brokerConfigProperties.getProperty("host.name") + ":" + brokerConfigProperties.getProperty("port"));
 		System.setProperty(KafkaConnectionPropertyNames.KAFKA_ZK_ADDRESS,

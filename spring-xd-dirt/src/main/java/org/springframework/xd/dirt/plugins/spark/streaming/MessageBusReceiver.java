@@ -106,8 +106,6 @@ class MessageBusReceiver extends Receiver {
 
 		@Override
 		protected boolean doSend(Message<?> message, long timeout) {
-			//todo: probably just make this take the payload as is (especially if the inputType is applied as usual)...
-			//otherwise, we could accept a MessageConverter somehow (via an optional getMessageConverter on the module?)
 			store(message.getPayload());
 			return true;
 		}
